@@ -174,83 +174,6 @@
     .stats-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
     .stats-row:last-child { border-bottom: 0; }
 
-    .spawn-panel {
-      margin-top: 18px;
-      padding: 16px;
-      border-radius: 20px;
-      border: 1px solid rgba(244,199,107,0.18);
-      background:
-        linear-gradient(180deg, rgba(0,0,0,0.22), rgba(0,0,0,0.1)),
-        repeating-linear-gradient(135deg, rgba(244,199,107,0.055) 0 1px, transparent 1px 11px);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
-    }
-
-    .spawn-title {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 11px;
-      color: rgba(255,244,219,0.72);
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: .15em;
-      text-transform: uppercase;
-    }
-
-    .spawn-title strong {
-      color: var(--gold2);
-      letter-spacing: .04em;
-      white-space: nowrap;
-    }
-
-    .spawn-label {
-      display: block;
-      margin-bottom: 9px;
-      color: rgba(255,244,219,0.68);
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    .spawn-control {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .spawn-control input {
-      width: 170px;
-      max-width: 100%;
-      border: 1px solid rgba(244,199,107,0.26);
-      outline: 0;
-      border-radius: 15px;
-      padding: 13px 14px;
-      color: #fff4db;
-      background: rgba(7,5,4,0.55);
-      font-size: 18px;
-      font-weight: 900;
-      box-shadow: inset 0 2px 10px rgba(0,0,0,0.35);
-    }
-
-    .spawn-control input:focus {
-      border-color: rgba(255,223,147,0.8);
-      box-shadow: 0 0 0 3px rgba(244,199,107,0.13), inset 0 2px 10px rgba(0,0,0,0.35);
-    }
-
-    .spawn-presets {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .spawn-note {
-      margin: 12px 0 0;
-      color: rgba(255,244,219,0.55);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
     .help {
       margin-top: 24px;
       padding: 16px 18px;
@@ -855,10 +778,6 @@
       flex: 0 0 auto;
     }
 
-    .compact-spawn {
-      margin-top: 18px;
-    }
-
     .settings-bottom {
       display: flex;
       gap: 12px;
@@ -885,8 +804,6 @@
       #mobile-controls { display: flex; }
       .hud-box { min-width: 134px; padding: 10px 12px; }
       .hud-value { font-size: 22px; }
-      .spawn-control { flex-wrap: wrap; }
-      .spawn-control input { width: 100%; }
     }
   
 
@@ -1708,28 +1625,6 @@
             </div>
           </div>
         </div>
-        <div class="spawn-panel" id="pauseTeleportPanel">
-          <div class="spawn-title">
-            <span>Teleporte de teste</span>
-            <strong id="spawnPreview">Porta 1</strong>
-          </div>
-          <label class="spawn-label" for="spawnDoorInput">Digite qualquer número de porta</label>
-          <div class="spawn-control">
-            <input id="spawnDoorInput" type="number" inputmode="numeric" min="1" max="999999" step="1" value="1" aria-label="Número da porta para teleportar">
-            <button id="applySpawnBtn" type="button">Teleportar</button>
-          </div>
-          <div class="spawn-presets">
-            <button class="secondary mini spawn-preset" type="button" data-door="1">1</button>
-            <button class="secondary mini spawn-preset" type="button" data-door="15">15</button>
-            <button class="secondary mini spawn-preset" type="button" data-door="30">30</button>
-            <button class="secondary mini spawn-preset" type="button" data-door="50">50</button>
-            <button class="secondary mini spawn-preset" type="button" data-door="100">100</button>
-            <button class="secondary mini spawn-preset" type="button" data-door="250">250</button>
-            <button class="secondary mini spawn-preset" type="button" data-door="500">500</button>
-            <button id="spawnBestBtn" class="secondary mini" type="button">Recorde</button>
-          </div>
-          <p class="spawn-note">O corredor é reconstruído na porta escolhida. Seus itens, cartas e modifiers atuais continuam.</p>
-        </div>
         <div class="menu-buttons" style="margin-top: 24px; justify-content: center;">
           <button id="resumeBtn">Continuar</button>
           <button id="backMenuBtn" class="secondary">Menu</button>
@@ -1776,9 +1671,6 @@
   const gameOverHint = document.getElementById('gameOverHint');
   const gameOverActions = document.getElementById('gameOverActions');
   const gameOverScene = document.getElementById('gameOverScene');
-  const spawnDoorInput = document.getElementById('spawnDoorInput');
-  const spawnPreview = document.getElementById('spawnPreview');
-  const spawnBestBtn = document.getElementById('spawnBestBtn');
   const bootIntro = document.getElementById('bootIntro');
   const languageIntro = document.getElementById('languageIntro');
   const chooseEnglishBtn = document.getElementById('chooseEnglishBtn');
@@ -1845,7 +1737,6 @@
   // então a run continua mais alta ou mais baixa em vez de teleportar.
   let floorShift = 0;
   let lastFloorShift = 0;
-  let selectedSpawnDoor = 1;
   let showHelp = false;
   let toastTimer = 0;
   let menuScene = 0;
@@ -2799,107 +2690,6 @@
       flashTouch.classList.toggle('active', !!itemState.flashlightOn);
       flashTouch.textContent = itemState.flashlightOn ? '💡' : '🔦';
     }
-    if (spawnPreview) spawnPreview.textContent = `Porta ${selectedSpawnDoor}`;
-  }
-
-  function sanitizeDoorValue(value) {
-    const n = Math.floor(Number(value));
-    if (!Number.isFinite(n)) return 1;
-    return clamp(n, 1, 999999);
-  }
-
-  function setSelectedSpawnDoor(value, save = true) {
-    selectedSpawnDoor = sanitizeDoorValue(value);
-    if (spawnDoorInput) spawnDoorInput.value = selectedSpawnDoor;
-    if (spawnPreview) spawnPreview.textContent = `Porta ${selectedSpawnDoor}`;
-    if (save) localStorage.setItem('ambition.spawnDoor', String(selectedSpawnDoor));
-  }
-
-  function teleportToDoor(value) {
-    const targetDoor = sanitizeDoorValue(value);
-    selectedSpawnDoor = targetDoor;
-
-    // Para qualquer sequência/evento em andamento antes de reconstruir o corredor.
-    safeSequence = null;
-    routeSequence = null;
-    fallCutscene = null;
-    blackoutEvent = null;
-    bipEvent = null;
-    bipCooldownDoors = 0;
-    smokerSignalDoor = null;
-    smokerEvent = null;
-    bruinbleEvent = null;
-    noteOverlayOpen = false;
-    noteOverlayType = null;
-    notePickupRect = null;
-    interactionHint = null;
-
-    // A porta escolhida passa a ser exatamente a próxima porta da run.
-    doorNumber = targetDoor;
-    safeRoomsCleared = Math.floor((targetDoor - 1) / 50);
-    mineLevel = safeRoomsCleared;
-    floorShift = 0;
-    lastFloorShift = 0;
-    worldSpeed = 0;
-    distance = Math.max(0, (targetDoor - 1) * 420);
-
-    doors = [];
-    obstacles = [];
-    particles = [];
-    flowers = [];
-    cardRects = [];
-    drawerRects = [];
-    wardrobeRects = [];
-    drawerOpened.clear();
-    decor = [];
-    resetBlackoutTimer();
-
-    player.x = Math.max(170, W * .22);
-    player.y = groundY;
-    player.vy = 0;
-    player.grounded = true;
-    player.crouching = false;
-    player.hidden = false;
-    player.hiddenWardrobeId = null;
-    player.invincible = 1.4;
-    player.wallContact = 0;
-    player.ridingCart = 0;
-    player.moveIntent = 0;
-
-    input.jumpPressed = false;
-    input.jumpHeld = false;
-    input.duckHeld = false;
-    input.leftHeld = false;
-    input.rightHeld = false;
-    input.interactPressed = false;
-    input.move = 0;
-
-    for (let i = 0; i < 24; i++) decor.push(makeDecor(Math.random() * W, true));
-
-    let x = Math.max(player.x + 420, W * .76);
-    while (x < W + 3400) {
-      const spacing = nextDoorSpacing();
-      doors.push(makeDoor(x, spacing));
-      x += spacing;
-    }
-    normalizeDoorNumbers();
-    nextDoorX = doors.length ? doors[doors.length - 1].x + nextDoorSpacing() : W + 900;
-    nextObstacleX = W + 780;
-
-    best = Math.max(best, targetDoor - 1);
-    localStorage.setItem('ambition.bestDoor', String(best));
-    setSelectedSpawnDoor(targetDoor, false);
-
-    state = 'playing';
-    setOverlay(pauseScreen, false);
-    setOverlay(gameOverScreen, false);
-    lastTime = performance.now();
-    cameraShake = Math.max(cameraShake, 5);
-    spawnParticles(player.x + 12, groundY - 4, 28, 'dust');
-    updateHud();
-    refreshRunSetupUi();
-    updateUiMode();
-    showToast(`Teleportado para a porta ${targetDoor}`);
   }
 
   function resetPowers() {
@@ -2937,7 +2727,6 @@
   function resetWorld() {
     worldSpeed = 0;
     distance = 0;
-    selectedSpawnDoor = 1;
     doorNumber = 1;
     nextDoorX = W + 220;
     nextObstacleX = W + 620;
@@ -3053,7 +2842,6 @@
   function pauseGame() {
     if (state === 'playing') {
       state = 'pause';
-      setSelectedSpawnDoor(doorNumber, false);
       setOverlay(pauseScreen, true);
       updateUiMode();
     }
@@ -4093,27 +3881,6 @@
     showToast(currentLang === 'en' ? 'Best reset' : 'Recorde zerado');
   });
 
-  if (spawnDoorInput) {
-    setSelectedSpawnDoor(doorNumber, false);
-    spawnDoorInput.addEventListener('input', () => setSelectedSpawnDoor(spawnDoorInput.value, false));
-    spawnDoorInput.addEventListener('change', () => setSelectedSpawnDoor(spawnDoorInput.value, false));
-    spawnDoorInput.addEventListener('keydown', (e) => {
-      if (e.code === 'Enter') {
-        e.preventDefault();
-        teleportToDoor(spawnDoorInput.value);
-      }
-    });
-  }
-  for (const btn of document.querySelectorAll('.spawn-preset')) {
-    btn.addEventListener('click', () => setSelectedSpawnDoor(btn.dataset.door, false));
-  }
-  if (spawnBestBtn) {
-    spawnBestBtn.addEventListener('click', () => setSelectedSpawnDoor(Math.max(1, best || 1), false));
-  }
-  const applySpawnBtn = document.getElementById('applySpawnBtn');
-  if (applySpawnBtn) applySpawnBtn.addEventListener('click', () => {
-    teleportToDoor(spawnDoorInput ? spawnDoorInput.value : selectedSpawnDoor);
-  });
 
   document.getElementById('tutorialBtn').addEventListener('click', () => openMenuPanel('tutorial'));
   document.getElementById('settingsBtn').addEventListener('click', () => openMenuPanel('settings'));
