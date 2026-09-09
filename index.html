@@ -1220,6 +1220,14 @@
       color: rgba(255,239,208,.72);
       font-size: 13px;
     }
+    .spectate-button {
+      border-color: rgba(158,230,255,.38) !important;
+      background: linear-gradient(180deg, rgba(31,55,66,.96), rgba(13,25,31,.98)) !important;
+      color: #dff7ff !important;
+      box-shadow: 0 12px 34px rgba(73,177,220,.12), inset 0 1px 0 rgba(255,255,255,.08) !important;
+    }
+    .spectate-button:hover { border-color: rgba(158,230,255,.68) !important; filter: brightness(1.12); }
+
     #gameOver {
       background: rgba(0,0,0,.78);
       backdrop-filter: blur(4px);
@@ -2513,6 +2521,7 @@
           <p class="death-final-text" id="gameOverText">Você chegou longe, mas a mina venceu desta vez.</p>
           <div class="gameover-actions hidden-actions" id="gameOverActions">
             <button id="retryBtn">Tentar de novo</button>
+            <button id="spectateBtn" class="secondary spectate-button" style="display:none">Spectar</button>
             <button id="gameOverMenuBtn" class="secondary">Menu</button>
           </div>
         </div>
@@ -2545,6 +2554,7 @@
   const gameOverHint = document.getElementById('gameOverHint');
   const gameOverActions = document.getElementById('gameOverActions');
   const gameOverScene = document.getElementById('gameOverScene');
+  const spectateBtn = document.getElementById('spectateBtn');
   const bootIntro = document.getElementById('bootIntro');
   const languageIntro = document.getElementById('languageIntro');
   const chooseEnglishBtn = document.getElementById('chooseEnglishBtn');
@@ -2996,6 +3006,7 @@
     if (achievementsKicker) achievementsKicker.textContent = currentLang === 'en' ? 'achievements' : 'conquistas';
     if (achievementsTitle) achievementsTitle.textContent = currentLang === 'en' ? 'Achievements' : 'Badges';
     setText('#resumeBtn', tr('resume')); setText('#backMenuBtn', tr('menu')); setText('#retryBtn', tr('retry')); setText('#gameOverMenuBtn', tr('menu'));
+    if (spectateBtn) spectateBtn.textContent = currentLang === 'en' ? 'Spectate' : 'Spectar';
     setText('#pause .menu-topline', tr('pauseTop')); setText('#pause .title', tr('pauseTitle')); setText('#pause .subtitle', tr('pauseDesc'));
     setText('#gameOver .menu-topline', tr('overTop')); setText('#gameOver .title', tr('overTitle')); setText('#gameOverText', tr('overDefault'));
     setText('#tutorialPanel .panel-kicker', tr('guideKicker')); setText('#tutorialPanel h2', tr('guideTitle')); setHtml('.tutorial-speech', tr('guideSpeech'));
@@ -3161,6 +3172,36 @@
     joinCheckTimer: null
   };
 
+
+  const spectator = {
+    active: false,
+    targetId: null,
+    sceneMode: '',
+    lastDoor: null,
+    lastPeerState: ''
+  };
+
+  // Multiplayer hostile-entity authority.
+  // In a multiplayer run the HOST decides the shared entity timeline once,
+  // then every client receives the same spawn and plays it locally.
+  const mpEntitySync = {
+    pending: [],
+    seen: new Set(),
+    processedDoors: new Set(),
+    seq: 0,
+    deeperReadyDoor: 15,
+    lastScheduledDoor: -999
+  };
+
+  function resetMpEntitySync() {
+    mpEntitySync.pending.length = 0;
+    mpEntitySync.seen.clear();
+    mpEntitySync.processedDoors.clear();
+    mpEntitySync.seq = 0;
+    mpEntitySync.deeperReadyDoor = 15;
+    mpEntitySync.lastScheduledDoor = -999;
+  }
+
   // THE VOID — multiplayer anti-separation entity.
   // It never deals damage. If a player falls 10+ rooms behind, it catches them up.
   let theVoidEvent = null;
@@ -3230,7 +3271,7 @@
       }
     }
     mpStartBtn?.classList.toggle('mp-hidden', !multiplayer.isHost || multiplayer.started);
-    if (mpLobbyStatus) mpLobbyStatus.textContent = `${players.length} jogador${players.length === 1 ? '' : 'es'} conectado${players.length === 1 ? '' : 's'}${multiplayer.isHost ? ' · você é o HOST' : ''}`;
+    if (mpLobbyStatus) mpLobbyStatus.textContent = `${players.length} jogador${players.length === 1 ? '' : 'es'} conectado${players.length === 1 ? '' : 's'}${multiplayer.isHost ? ' · você é o HOST' : ''} · ${uiText('ENTIDADES SINCRONIZADAS','ENTITIES SYNCED')}`;
   }
 
   async function mpTrackPresence() {
@@ -3269,6 +3310,8 @@
     multiplayer.localWorldX = 0;
     multiplayer.runSeed = 0;
     multiplayer.sharedOpenedDoors.clear();
+    resetMpEntitySync();
+    spectator.active=false;spectator.targetId=null;spectator.sceneMode='';
     theVoidEvent = null;
     theVoidCooldown = 0;
     mpShowLobby(false);
@@ -3318,7 +3361,10 @@
         worldX:targetWorldX, targetWorldX, y:.7, ty:.7,
         facing:1, crouching:false, grounded:true, hidden:false, flashlightOn:false,
         runPhase:0, flip:0, flipVelocity:0, speed:0,
-        state:'playing', door:1, depthX:0, targetDepthX:0, depthY:440, depthLane:0, depthPhase:'', depthCartReady:false, lastSeen:performance.now()
+        state:'playing', door:1,
+        rootX:130, rootLane:0, rootFacing:1, rootWalk:0, rootHidden:false, rootMonsterX:13200, rootMonsterLane:0, rootMonsterWalk:0, rootMonsterAlert:0,
+        depthX:0, targetDepthX:0, depthY:440, depthLane:0, depthPhase:'', depthCartReady:false, depthMonsterX:0, depthMonsterWalk:0, depthDoorsPassed:0,
+        lastSeen:performance.now()
       };
       multiplayer.peers.set(data.id, peer);
     }
@@ -3336,11 +3382,23 @@
     peer.speed = Number.isFinite(Number(data.speed)) ? Number(data.speed) : 0;
     peer.state = String(data.state || 'playing');
     peer.door = Math.max(1, Number(data.door) || 1);
+    if (Number.isFinite(Number(data.rootX))) peer.rootX = Number(data.rootX);
+    peer.rootLane = Number(data.rootLane) === 1 ? 1 : 0;
+    peer.rootFacing = Number(data.rootFacing) < 0 ? -1 : 1;
+    if (Number.isFinite(Number(data.rootWalk))) peer.rootWalk = Number(data.rootWalk);
+    peer.rootHidden = !!data.rootHidden;
+    if (Number.isFinite(Number(data.rootMonsterX))) peer.rootMonsterX = Number(data.rootMonsterX);
+    peer.rootMonsterLane = Number(data.rootMonsterLane) === 1 ? 1 : 0;
+    if (Number.isFinite(Number(data.rootMonsterWalk))) peer.rootMonsterWalk = Number(data.rootMonsterWalk);
+    if (Number.isFinite(Number(data.rootMonsterAlert))) peer.rootMonsterAlert = Number(data.rootMonsterAlert);
     if (Number.isFinite(Number(data.depthX))) peer.targetDepthX = Number(data.depthX);
     if (Number.isFinite(Number(data.depthY))) peer.depthY = Number(data.depthY);
     peer.depthLane = Number(data.depthLane) === 1 ? 1 : 0;
     peer.depthPhase = String(data.depthPhase || '');
     peer.depthCartReady = !!data.depthCartReady;
+    if (Number.isFinite(Number(data.depthMonsterX))) peer.depthMonsterX = Number(data.depthMonsterX);
+    if (Number.isFinite(Number(data.depthMonsterWalk))) peer.depthMonsterWalk = Number(data.depthMonsterWalk);
+    if (Number.isFinite(Number(data.depthDoorsPassed))) peer.depthDoorsPassed = Number(data.depthDoorsPassed);
     peer.lastSeen = performance.now();
   }
 
@@ -3357,6 +3415,167 @@
     }
   }
 
+  function mpEntityBusy() {
+    return !!(bipEvent || smokerEvent || bruinbleEvent || stalkerEvent);
+  }
+
+  function mpEntityEventId(entity, triggerDoor) {
+    mpEntitySync.seq += 1;
+    return `${multiplayer.runSeed || 0}:${Math.max(1, Math.floor(Number(triggerDoor) || 1))}:${entity}:${mpEntitySync.seq}`;
+  }
+
+  function mpQueueEntityEvent(data) {
+    if (!data || !multiplayer.active || !multiplayer.started) return false;
+    const entity = String(data.entity || '').toLowerCase();
+    if (!['deeper','smoker','bruinble','stalker'].includes(entity)) return false;
+    const id = String(data.eventId || `${entity}:${data.triggerDoor || 0}:${data.createdAt || 0}`);
+    if (mpEntitySync.seen.has(id)) return false;
+    mpEntitySync.seen.add(id);
+    mpEntitySync.pending.push({
+      eventId:id,
+      entity,
+      triggerDoor:Math.max(1, Math.floor(Number(data.triggerDoor) || 1)),
+      payload:(data.payload && typeof data.payload === 'object') ? data.payload : {},
+      createdAt:Number(data.createdAt) || Date.now()
+    });
+    mpEntitySync.pending.sort((a,b) => a.triggerDoor - b.triggerDoor || a.createdAt - b.createdAt);
+    return true;
+  }
+
+  function mpEmitEntityEvent(entity, triggerDoor, payload = {}) {
+    if (!multiplayer.active || !multiplayer.started || !multiplayer.isHost) return false;
+    const packet = {
+      type:'entity_spawn',
+      eventId:mpEntityEventId(entity, triggerDoor),
+      entity,
+      triggerDoor:Math.max(1, Math.floor(Number(triggerDoor) || 1)),
+      payload,
+      createdAt:Date.now(),
+      by:multiplayer.playerId
+    };
+    // self:false means the host will not receive its own broadcast, so enqueue locally too.
+    mpQueueEntityEvent(packet);
+    mpBroadcast('room_control', packet);
+    return true;
+  }
+
+  function mpFindDoorByNumber(number) {
+    const n = Math.max(1, Math.floor(Number(number) || 1));
+    return doors.find(d => d && d.number === n) || null;
+  }
+
+  function mpStartQueuedEntity(ev) {
+    if (!ev || state !== 'playing' || routeSequence || safeSequence) return false;
+    if (mpEntityBusy()) return false;
+    // The entity belongs to the room that was just opened. If this client is behind,
+    // keep it queued until they reach the exact shared room instead of spawning it early.
+    if (doorNumber <= ev.triggerDoor) return false;
+
+    if (ev.entity === 'deeper') {
+      if (!deeperCanStart()) return false;
+      bipEvent = { phase:'warn', t:0, x:-240, y:currentFloorY(), killed:false, flash:0, syncId:ev.eventId };
+      cameraShake = Math.max(cameraShake, 3.8);
+      return true;
+    }
+
+    if (ev.entity === 'smoker') {
+      if (!smokerCanStart()) return false;
+      smokerSignalDoor = null;
+      smokerEvent = {
+        phase:'warning', t:0, warningDuration:4, x:W+280, y:currentFloorY(),
+        retreat:0, escaped:false, flash:0, smokeT:0, syncId:ev.eventId
+      };
+      return true;
+    }
+
+    if (ev.entity === 'bruinble') {
+      if (!bruinbleCanStart()) return false;
+      const preferredDoor = mpFindDoorByNumber(ev.payload?.lampDoorNumber);
+      let anchor = null;
+      if (preferredDoor) anchor = getStandingLanternAnchor(preferredDoor, Number(ev.payload?.lampIndex) || 0);
+      if (!anchor) anchor = findBruinbleLanternAnchor();
+      const lampX = anchor ? anchor.x : Math.max(player.x + 180, W * .68);
+      const lampY = anchor ? anchor.y : currentFloorY();
+      bruinbleEvent = {
+        phase:'preflash', lampDoor:anchor ? anchor.door : null, lampIndex:anchor ? anchor.index : 0,
+        lampX, lampY, preflashT:0, preflashDuration:2, t:0, duration:5,
+        attackT:0, attackX:lampX, attackY:lampY-214, flash:0, syncId:ev.eventId
+      };
+      return true;
+    }
+
+    if (ev.entity === 'stalker') {
+      if (!stalkerCanStart()) return false;
+      const sideOffset = clamp(Number(ev.payload?.sideOffset) || 140, 105, 195);
+      stalkerEvent = {
+        t:0, duration:2.65,
+        x:Math.max(42, player.x - sideOffset), y:currentFloorY(),
+        sway:Number.isFinite(Number(ev.payload?.sway)) ? Number(ev.payload.sway) : 0,
+        hit:false, syncId:ev.eventId
+      };
+      blackoutFlashPulse = Math.max(blackoutFlashPulse, .42);
+      rootSound(58,.28,true);
+      return true;
+    }
+    return false;
+  }
+
+  function mpProcessPendingEntityEvents() {
+    if (!multiplayer.active || !multiplayer.started || !mpEntitySync.pending.length) return;
+    if (state !== 'playing' || routeSequence || safeSequence || mpEntityBusy()) return;
+
+    // Never stack two hostile entities locally. Old events stay queued until the current one ends.
+    for (let i = 0; i < mpEntitySync.pending.length; i++) {
+      const ev = mpEntitySync.pending[i];
+      if (doorNumber <= ev.triggerDoor) break;
+      if (isSafeRoomBufferDoor(ev.triggerDoor)) {
+        mpEntitySync.pending.splice(i, 1);
+        i--;
+        continue;
+      }
+      if (mpStartQueuedEntity(ev)) {
+        mpEntitySync.pending.splice(i, 1);
+        return;
+      }
+    }
+  }
+
+  function mpHostScheduleDoorEntity(openedNumber) {
+    if (!multiplayer.active || !multiplayer.started || !multiplayer.isHost) return;
+    const n = Math.max(1, Math.floor(Number(openedNumber) || 1));
+    if (mpEntitySync.processedDoors.has(n)) return;
+    mpEntitySync.processedDoors.add(n);
+    if (isSafeRoomBufferDoor(n) || n === 250 || n === 500) return;
+
+    // A small shared spacing prevents a second creature being scheduled on top of the first one.
+    if (n <= mpEntitySync.lastScheduledDoor + 2) return;
+
+    const seedBase = (multiplayer.runSeed || 1) * .019 + n * 197.713;
+    let entity = null;
+    let triggerDoor = n;
+    let payload = {};
+
+    // Same general progression as the solo logic, but the roll happens ONCE on the host.
+    if (n >= 15 && n >= mpEntitySync.deeperReadyDoor && seededRandom(seedBase + 11) < .30) {
+      entity = 'deeper';
+      const cooldown = 4 + Math.floor(seededRandom(seedBase + 12) * 4);
+      mpEntitySync.deeperReadyDoor = n + cooldown;
+    } else if (n >= 30 && seededRandom(seedBase + 21) < .28) {
+      // Smoker warns on one door and attacks on the next, like the original system.
+      triggerDoor = n + 1;
+      if (!isSafeRoomBufferDoor(triggerDoor)) entity = 'smoker';
+    } else if (n >= 50 && seededRandom(seedBase + 31) < .22) {
+      entity = 'bruinble';
+      // If the host currently has that room loaded, share which lantern was chosen too.
+      const anchor = findBruinbleLanternAnchor();
+      if (anchor?.door) payload = { lampDoorNumber:anchor.door.number, lampIndex:anchor.index || 0 };
+    }
+
+    if (!entity) return;
+    mpEntitySync.lastScheduledDoor = triggerDoor;
+    mpEmitEntityEvent(entity, triggerDoor, payload);
+  }
+
   function mpHandleControl(payload) {
     const data = payload?.payload || payload;
     if (!data) return;
@@ -3365,6 +3584,7 @@
       multiplayer.runSeed = Math.max(1, Math.floor(Number(data.seed) || multiplayer.runSeed || 1));
       multiplayer.localWorldX = 0;
       multiplayer.sharedOpenedDoors.clear();
+      resetMpEntitySync();
       theVoidEvent = null;
       theVoidCooldown = 0;
       mpTrackPresence();
@@ -3374,7 +3594,17 @@
       mpNetBadge?.classList.add('show');
       return;
     }
-    if (data.type === 'door_open') { mpApplyRemoteDoor(data.door); return; }
+    if (data.type === 'door_open') {
+      mpApplyRemoteDoor(data.door);
+      // Whoever opens a room first tells the HOST; the HOST rolls that room exactly once.
+      if (multiplayer.isHost) mpHostScheduleDoorEntity(data.door);
+      return;
+    }
+    if (data.type === 'entity_spawn') {
+      mpQueueEntityEvent(data);
+      mpProcessPendingEntityEvents();
+      return;
+    }
     if (data.type === 'depths_start') { if (depthsEncounter && depthsEncounter.phase === 'checkpoint') beginDepthsCinematic(); return; }
     if (data.type === 'depths_puzzle') { applyRemoteDepthsPuzzle(data.index); return; }
     if (data.type === 'depths_door') { applyRemoteDepthsDoor(data.index, data.name); return; }
@@ -3465,6 +3695,7 @@
     multiplayer.runSeed = 100000 + Math.floor(Math.random() * 900000000);
     multiplayer.localWorldX = 0;
     multiplayer.sharedOpenedDoors.clear();
+    resetMpEntitySync();
     theVoidEvent = null;
     theVoidCooldown = 0;
     await mpTrackPresence();
@@ -3497,13 +3728,25 @@
       flip:player.flip,
       flipVelocity:player.flipVelocity,
       speed:worldSpeed,
-      state,
+      state:spectator.active ? 'gameover' : state,
       door:doorNumber,
+      rootX:rootEncounter ? rootEncounter.x : null,
+      rootLane:rootEncounter ? rootEncounter.lane : 0,
+      rootFacing:rootEncounter ? rootEncounter.facing : player.facing,
+      rootWalk:rootEncounter ? rootEncounter.walk : 0,
+      rootHidden:!!(rootEncounter && rootEncounter.hidden),
+      rootMonsterX:rootEncounter ? rootEncounter.mx : null,
+      rootMonsterLane:rootEncounter ? rootEncounter.mlane : 0,
+      rootMonsterWalk:rootEncounter ? rootEncounter.mwalk : 0,
+      rootMonsterAlert:rootEncounter ? rootEncounter.alert : 0,
       depthX:depthsEncounter ? depthsEncounter.x : null,
       depthY:depthsEncounter ? player.y : null,
       depthLane:depthsEncounter ? depthsEncounter.lane : 0,
       depthPhase:depthsEncounter ? depthsEncounter.phase : '',
       depthCartReady:!!(depthsEncounter && depthsEncounter.cartReady),
+      depthMonsterX:depthsEncounter ? depthsEncounter.monsterX : null,
+      depthMonsterWalk:depthsEncounter ? depthsEncounter.monsterWalk : 0,
+      depthDoorsPassed:depthsEncounter ? depthsEncounter.doorsPassed : 0,
       t:Date.now()
     });
   }
@@ -3587,13 +3830,25 @@
       flip:player.flip,
       flipVelocity:player.flipVelocity,
       speed:worldSpeed,
-      state,
+      state:spectator.active ? 'gameover' : state,
       door:doorNumber,
+      rootX:rootEncounter ? rootEncounter.x : null,
+      rootLane:rootEncounter ? rootEncounter.lane : 0,
+      rootFacing:rootEncounter ? rootEncounter.facing : player.facing,
+      rootWalk:rootEncounter ? rootEncounter.walk : 0,
+      rootHidden:!!(rootEncounter && rootEncounter.hidden),
+      rootMonsterX:rootEncounter ? rootEncounter.mx : null,
+      rootMonsterLane:rootEncounter ? rootEncounter.mlane : 0,
+      rootMonsterWalk:rootEncounter ? rootEncounter.mwalk : 0,
+      rootMonsterAlert:rootEncounter ? rootEncounter.alert : 0,
       depthX:depthsEncounter ? depthsEncounter.x : null,
       depthY:depthsEncounter ? player.y : null,
       depthLane:depthsEncounter ? depthsEncounter.lane : 0,
       depthPhase:depthsEncounter ? depthsEncounter.phase : '',
       depthCartReady:!!(depthsEncounter && depthsEncounter.cartReady),
+      depthMonsterX:depthsEncounter ? depthsEncounter.monsterX : null,
+      depthMonsterWalk:depthsEncounter ? depthsEncounter.monsterWalk : 0,
+      depthDoorsPassed:depthsEncounter ? depthsEncounter.doorsPassed : 0,
       t:Date.now()
     });
   }
@@ -3728,6 +3983,83 @@
       ctx.fillText('THE VOID', W / 2, H / 2);
     }
     ctx.restore();
+  }
+
+  function mpSpectatablePeers() {
+    if (!multiplayer.active || !multiplayer.started) return [];
+    return [...multiplayer.peers.values()].filter(peer => peer && ['playing','safe','root','depths'].includes(peer.state));
+  }
+  function currentSpectatorPeer() { return spectator.active ? (multiplayer.peers.get(spectator.targetId) || null) : null; }
+  function syncSpectateButton() {
+    if (!spectateBtn) return;
+    spectateBtn.style.display = (multiplayer.active && multiplayer.started && mpSpectatablePeers().length) ? '' : 'none';
+    spectateBtn.textContent = currentLang === 'en' ? 'Spectate' : 'Spectar';
+  }
+  function resetSpectatorInputs() {
+    input.leftHeld=false;input.rightHeld=false;input.duckHeld=false;input.jumpHeld=false;input.jumpPressed=false;input.interactPressed=false;
+    rootSprintHeld=false;rootSlow=false;keys.clear();worldSpeed=0;
+  }
+  function chooseSpectatorTarget(step=1) {
+    const peers=mpSpectatablePeers();
+    if(!peers.length){spectator.targetId=null;return null;}
+    let i=peers.findIndex(p=>p.id===spectator.targetId);
+    if(i<0)i=step<0?0:-1;
+    i=(i+step+peers.length)%peers.length;
+    spectator.targetId=peers[i].id;spectator.sceneMode='';spectator.lastDoor=null;spectator.lastPeerState='';
+    return peers[i];
+  }
+  function spectatorBuildMine(peer) {
+    clearDepthsEncounter();clearRootEncounter();
+    doorNumber=Math.max(1,Math.floor(Number(peer.door)||1));distance=Math.max(0,Number(peer.worldX)||0);multiplayer.localWorldX=Number(peer.worldX)||0;
+    safeRoomsCleared=Math.floor((doorNumber-1)/50);mineLevel=safeRoomsCleared;floorShift=0;lastFloorShift=0;
+    doors=[];obstacles=[];particles=[];flowers=[];decor=[];for(let i=0;i<24;i++)decor.push(makeDecor(Math.random()*W,true));
+    rebuildCorridorAhead(-260);player.x=Math.max(150,W*.22);player.y=clamp((Number(peer.y)||.7)*H,0,H+120);player.hidden=true;
+    spectator.sceneMode='mine';spectator.lastDoor=doorNumber;
+  }
+  function spectatorShiftMine(dx) {
+    if(!Number.isFinite(dx)||Math.abs(dx)<.001)return;
+    for(const d of doors){d.prevX=d.x;d.x-=dx;if(Number.isFinite(d.roomX))d.roomX-=dx;}
+    for(const o of obstacles){o.prevX=o.x;o.x-=dx;}for(const p of particles)p.x-=dx*.25;for(const fl of flowers)fl.x-=dx;
+    for(const d of decor){d.x-=dx*d.layer;if(d.x<-220)Object.assign(d,makeDecor(W+Math.random()*400,true));}
+    nextObstacleX-=dx;nextDoorX-=dx;
+  }
+  function spectatorEnsureRoot(peer) {
+    if(!rootEncounter||spectator.sceneMode!=='root'){
+      startRootEncounter();state='spectating';rootEncounter.phase='play';rootEncounter.t=0;rootEncounter.cue=5;rootEncounter.hidden=null;rootEncounter.wardrobeGame=null;rootEncounter.paused=false;
+      rootControls.style.display='none';spectator.sceneMode='root';
+    }
+    const b=rootEncounter;b.x=Number.isFinite(Number(peer.rootX))?Number(peer.rootX):b.x;b.lane=Number(peer.rootLane)===1?1:0;b.facing=Number(peer.rootFacing)<0?-1:1;b.walk=Number(peer.rootWalk)||0;
+    b.hidden=peer.rootHidden?(b.wardrobes.find(w=>w.lane===b.lane&&Math.abs(w.x-b.x)<180)||null):null;b.mx=Number.isFinite(Number(peer.rootMonsterX))?Number(peer.rootMonsterX):b.mx;
+    b.mlane=Number(peer.rootMonsterLane)===1?1:0;b.mwalk=Number(peer.rootMonsterWalk)||0;b.alert=Number(peer.rootMonsterAlert)||0;rootCamera(b,.16);
+  }
+  function spectatorEnsureDepths(peer) {
+    if(!depthsEncounter||spectator.sceneMode!=='depths'){startDepthsEncounter();state='spectating';rootControls.style.display='none';spectator.sceneMode='depths';}
+    const d=depthsEncounter;const phase=['checkpoint','cinema','chase','cart','ending'].includes(peer.depthPhase)?peer.depthPhase:'chase';d.phase=phase;
+    d.x=Number.isFinite(Number(peer.depthX))?Number(peer.depthX):d.x;d.monsterX=Number.isFinite(Number(peer.depthMonsterX))?Number(peer.depthMonsterX):Math.max(20,d.x-300);
+    d.monsterWalk=Number(peer.depthMonsterWalk)||0;d.doorsPassed=Math.max(0,Math.floor(Number(peer.depthDoorsPassed)||0));d.cam=clamp(d.x-285,0,Math.max(0,d.rooms.at(-1).end-900));
+    player.x=d.x;player.y=Number.isFinite(Number(peer.depthY))?Number(peer.depthY):depthsChaseGroundY(d.x,d);player.facing=peer.facing||1;player.crouching=!!peer.crouching;player.grounded=peer.grounded!==false;player.runPhase=Number(peer.runPhase)||0;player.hidden=false;
+    for(let i=0;i<d.sectorDoors.length;i++){const opened=i<d.doorsPassed;d.sectorDoors[i].opened=opened;d.sectorDoors[i].opening=opened;d.sectorDoors[i].open=opened?1:0;}
+  }
+  function updateSpectating(dt) {
+    if(!spectator.active)return;let peer=currentSpectatorPeer();if(!peer||!['playing','safe','root','depths'].includes(peer.state))peer=chooseSpectatorTarget(1);
+    if(!peer){showToast(uiText('Não há mais jogadores para spectar.','There are no players left to spectate.'));exitSpectating();return;}
+    spectator.lastPeerState=peer.state;
+    if(peer.state==='root')spectatorEnsureRoot(peer);else if(peer.state==='depths')spectatorEnsureDepths(peer);else{
+      const pd=Math.max(1,Math.floor(Number(peer.door)||1));if(spectator.sceneMode!=='mine'||spectator.lastDoor!==pd)spectatorBuildMine(peer);
+      const tx=Number(peer.worldX)||0;const dx=tx-multiplayer.localWorldX;spectatorShiftMine(dx);multiplayer.localWorldX=tx;distance=tx;doorNumber=pd;spectator.lastDoor=pd;player.y=clamp((Number(peer.y)||.7)*H,0,H+120);player.hidden=true;
+    }updateHud();
+  }
+  function startSpectating() {
+    if(!multiplayer.active||!multiplayer.started)return false;const peer=chooseSpectatorTarget(1);if(!peer){showToast(uiText('Ninguém vivo para spectar.','No living player to spectate.'));syncSpectateButton();return false;}
+    spectator.active=true;state='spectating';gameOverSequence=null;setOverlay(gameOverScreen,false);setOverlay(pauseScreen,false);resetSpectatorInputs();updateSpectating(0);updateUiMode();return true;
+  }
+  function exitSpectating() {
+    if(!spectator.active)return;spectator.active=false;spectator.targetId=null;spectator.sceneMode='';resetSpectatorInputs();player.hidden=false;state='gameover';
+    if(rootEncounter)clearRootEncounter();if(depthsEncounter)clearDepthsEncounter();setOverlay(gameOverScreen,true);revealGameOverFinalText();updateUiMode();
+  }
+  function drawSpectatorOverlay() {
+    if(!spectator.active)return;const peer=currentSpectatorPeer();ctx.save();const width=Math.min(620,W-28),x=(W-width)/2;ctx.fillStyle='rgba(3,8,11,.78)';ctx.strokeStyle='rgba(158,230,255,.28)';ctx.lineWidth=1;roundRect(x,18,width,64,17);ctx.fill();ctx.stroke();ctx.textAlign='center';ctx.fillStyle='#dff7ff';ctx.font='900 13px system-ui';
+    const location=!peer?'':peer.state==='root'?'THE PIT':peer.state==='depths'?'THE DEPTHS':`DOOR ${Math.max(1,Math.floor(Number(peer.door)||1))}`;ctx.fillText(`${currentLang==='en'?'SPECTATING':'SPECTANDO'} · ${peer?.name||'...'} · ${location}`,W/2,43);ctx.fillStyle='rgba(223,247,255,.62)';ctx.font='800 10px system-ui';ctx.fillText(currentLang==='en'?'A / D or ← / → switch player · ESC returns to death screen':'A / D ou ← / → troca jogador · ESC volta para a tela de morte',W/2,64);ctx.restore();
   }
 
   function drawRemotePlayers() {
@@ -4990,7 +5322,10 @@
     clearRootEncounter();
     worldSpeed = 0;
     distance = 0;
-    if (multiplayer.active && multiplayer.started) multiplayer.localWorldX = 0;
+    if (multiplayer.active && multiplayer.started) {
+      multiplayer.localWorldX = 0;
+      resetMpEntitySync();
+    }
     doorNumber = 1;
     nextDoorX = W + 220;
     nextObstacleX = W + 620;
@@ -5157,6 +5492,7 @@
       gameOverMessage.classList.add('small');
       gameOverMessage.textContent = gameOverSequence.parts[gameOverSequence.parts.length - 1] || tr('overDefault');
     }
+    syncSpectateButton();
   }
 
   function advanceGameOverSequence() {
@@ -5205,6 +5541,7 @@
     const finalText = (I18N[currentLang] || I18N.pt).gameOver(reason, doorNumber - 1, best);
     gameOverText.textContent = finalText;
     startGameOverSequence(reason);
+    syncSpectateButton();
     setOverlay(gameOverScreen, true);
     updateHud();
     updateUiMode();
@@ -5334,7 +5671,17 @@
         accent: template.accent
       });
     }
-    return items;
+    // PATCH: wardrobes reserve their whole footprint. Drawers that would be
+    // visually hidden behind a wardrobe are removed from that room layout.
+    const wardrobes = items.filter(item => item.type === 'wardrobe');
+    return items.filter(item => {
+      if (item.type !== 'drawer') return true;
+      return !wardrobes.some(wardrobe => {
+        const wardrobeHalf = (92 * (wardrobe.scale || 1)) * .5;
+        const drawerHalf = (68 * (item.scale || 1)) * .5;
+        return Math.abs(item.x - wardrobe.x) < wardrobeHalf + drawerHalf + 22;
+      });
+    });
   }
 
   function getRoomInteractives() {
@@ -5608,8 +5955,20 @@
       return;
     }
     if (!stalkerCanStart()) return;
+    // In multiplayer only the HOST owns the Stalker timer. Other clients wait
+    // for the shared entity_spawn packet instead of rolling their own timer.
+    if (multiplayer.active && multiplayer.started && !multiplayer.isHost) return;
     stalkerNext -= dt;
-    if (stalkerNext <= 0) startStalkerEvent();
+    if (stalkerNext <= 0) {
+      if (multiplayer.active && multiplayer.started && multiplayer.isHost) {
+        const sideOffset = 105 + Math.random() * 90;
+        const sway = Math.random() * TAU;
+        mpEmitEntityEvent('stalker', Math.max(1, doorNumber - 1), { sideOffset, sway });
+        stalkerNext = 12 + Math.random() * 16;
+      } else {
+        startStalkerEvent();
+      }
+    }
   }
 
   function updateBlackout(dt) {
@@ -6121,6 +6480,12 @@
   }
 
   window.addEventListener('keydown', (e) => {
+    if (state === 'spectating') {
+      if (['ArrowRight','KeyD'].includes(e.code)) { e.preventDefault(); chooseSpectatorTarget(1); updateSpectating(0); return; }
+      if (['ArrowLeft','KeyA'].includes(e.code)) { e.preventDefault(); chooseSpectatorTarget(-1); updateSpectating(0); return; }
+      if (e.code === 'Escape') { e.preventDefault(); exitSpectating(); return; }
+      e.preventDefault(); return;
+    }
     if (e.code === 'F2' && (adminState.enabled || state === 'menu')) { e.preventDefault(); adminState.overlayOpen ? closeAdminPanel() : openAdminPanel(); return; }
     if (adminState.overlayOpen) { if (e.code === 'Escape') { e.preventDefault(); closeAdminPanel(); } return; }
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
@@ -6297,10 +6662,11 @@
   mpLeaveBtn?.addEventListener('click', () => mpLeaveRoom(false));
   mpRoomCodeInput?.addEventListener('input', () => { mpRoomCodeInput.value = mpNormalizeCode(mpRoomCodeInput.value); });
   mpRoomCodeInput?.addEventListener('keydown', e => { if (e.key === 'Enter') mpJoinRoom(); });
-  document.getElementById('retryBtn').addEventListener('click', startGame);
+  document.getElementById('retryBtn').addEventListener('click', () => { spectator.active=false; spectator.targetId=null; startGame(); });
+  spectateBtn?.addEventListener('click', startSpectating);
   document.getElementById('resumeBtn').addEventListener('click', resumeGame);
   document.getElementById('backMenuBtn').addEventListener('click', openMenu);
-  document.getElementById('gameOverMenuBtn').addEventListener('click', openMenu);
+  document.getElementById('gameOverMenuBtn').addEventListener('click', () => { spectator.active=false; spectator.targetId=null; openMenu(); });
   if (gameOverScene) gameOverScene.addEventListener('pointerdown', (e) => {
     const isButton = e.target && e.target.tagName === 'BUTTON';
     if (!isButton) advanceGameOverSequence();
@@ -6678,16 +7044,17 @@
 
     refreshMoveInput();
     const speedScale = mineSpeedModifier();
-    const levelBoost = Math.min(220, Math.floor((doorNumber - 1) / 10) * 12);
+    // PATCH: much slower and heavier, close to The Pit pacing.
+    const levelBoost = Math.min(80, Math.floor((doorNumber - 1) / 10) * 5);
     const speedPower = Math.pow(1.25, upgrades.speed) * (upgrades.priority ? 1.5 : 1);
     const slideMultiplier = upgrades.slide && player.crouching && input.move > 0 ? Math.min(9, Math.pow(1.5, player.slideTime)) : 1;
     const rageMultiplier = rageActive > 0 ? 150 : 1;
-    const rightRunSpeed = (820 + levelBoost) * speedPower * slideMultiplier * speedScale;
-    const leftRunSpeed = 560 * speedPower * speedScale;
+    const rightRunSpeed = (360 + levelBoost) * speedPower * slideMultiplier * speedScale;
+    const leftRunSpeed = 260 * speedPower * speedScale;
     let targetSpeed = input.move > 0 ? rightRunSpeed : input.move < 0 ? -leftRunSpeed : 0;
     if (rageMultiplier > 1 && targetSpeed <= 0) targetSpeed = rightRunSpeed;
     targetSpeed *= rageMultiplier;
-    const accel = rageActive > 0 ? 95000 : (Math.abs(targetSpeed) > Math.abs(worldSpeed) ? 3100 : 3800);
+    const accel = rageActive > 0 ? 95000 : (Math.abs(targetSpeed) > Math.abs(worldSpeed) ? 1550 : 2050);
     worldSpeed += clamp(targetSpeed - worldSpeed, -accel * dt, accel * dt);
     if (Math.abs(worldSpeed) < 3 && targetSpeed === 0) worldSpeed = 0;
 
@@ -6826,7 +7193,12 @@
         const blockedEntityDoor = isSafeRoomBufferDoor(openedNumber);
         if (blockedEntityDoor) {
           clearHostileEntities(true);
+        } else if (multiplayer.active && multiplayer.started) {
+          // Multiplayer: only the HOST creates the shared entity timeline.
+          // Non-host clients never do their own random roll anymore.
+          if (multiplayer.isHost) mpHostScheduleDoorEntity(openedNumber);
         } else {
+          // Solo keeps the original independent random behavior.
           if (openedNumber >= 15) {
             bipCooldownDoors = Math.max(0, bipCooldownDoors - 1);
             if (bipCooldownDoors <= 0 && deeperCanStart() && Math.random() < 0.30) {
@@ -8287,7 +8659,7 @@
     }
     stopJukebox();state='gameover';
     if(!adminState.runUsed){best=Math.max(best,500);localStorage.setItem('ambition.bestDoor',String(best));}
-    gameOverText.textContent=reason;startGameOverSequence(reason);setOverlay(gameOverScreen,true);updateHud();updateUiMode();
+    gameOverText.textContent=reason;startGameOverSequence(reason);syncSpectateButton();setOverlay(gameOverScreen,true);updateHud();updateUiMode();
     mpBroadcastImmediateState();
   }
   function depthsStumble(d,o){
@@ -8577,6 +8949,7 @@
   function drawDepthsRemotePlayers(d){
     if(!multiplayer.active)return;
     for(const peer of multiplayer.peers.values()){
+      if(spectator.active&&peer.id===spectator.targetId)continue;
       if(peer.state!=='depths'||peer.hidden)continue;const worldPeerX=Number(peer.depthX)||0;const screenPeerX=worldPeerX-d.cam;if(screenPeerX<-120||screenPeerX>1020)continue;const sx=worldPeerX;const fallbackY=depthsChaseGroundY(worldPeerX,d),y=Number.isFinite(Number(peer.depthY))?Number(peer.depthY):fallbackY;
       const rp={x:sx,y,facing:peer.facing||1,crouching:!!peer.crouching,grounded:peer.grounded!==false,runPhase:peer.runPhase||0,flip:0,flipVelocity:0,invincible:0,hitFlash:0,hidden:false};drawPlayer(rp,peer.speed||0,'playing',null,peer.flashlightOn?'flashlight':null,!!peer.flashlightOn,false);
       ctx.save();ctx.textAlign='center';ctx.font='900 11px system-ui';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.fillStyle='#fff1cf';ctx.strokeText(peer.name,sx,y-145);ctx.fillText(peer.name,sx,y-145);ctx.restore();
@@ -8666,7 +9039,9 @@
     }
 
     updateGameOverSequence(dt);
-    if (state === 'root') {
+    if (state === 'spectating') {
+      updateSpectating(dt);
+    } else if (state === 'root') {
       updateRootEncounter(dt);
     } else if (state === 'depths') {
       updateDepthsEncounter(dt);
@@ -8683,6 +9058,7 @@
         updateWorld(dt);
         updateDoors(dt);
         if (state === 'root') return;
+        mpProcessPendingEntityEvents();
         enforceEntityTransitionSafety();
         updateRoomInteractives(dt);
         updateBlackout(dt);
@@ -11976,6 +12352,11 @@
   }
 
   function draw() {
+    if (state === 'spectating' && spectator.active) {
+      const peer = currentSpectatorPeer();
+      if (peer?.state === 'root' && rootEncounter) { drawRootEncounter(); drawSpectatorOverlay(); return; }
+      if (peer?.state === 'depths' && depthsEncounter) { drawDepthsEncounter(); drawSpectatorOverlay(); return; }
+    }
     if (state === 'root' && rootEncounter) { drawRootEncounter(); return; }
     if (state === 'depths' && depthsEncounter) { drawDepthsEncounter(); return; }
     ctx.save();
@@ -12004,7 +12385,7 @@
       drawTrapdoor(safeSequence);
       drawFlowers();
       drawParticles();
-      drawPlayer();
+      if (state !== 'spectating') drawPlayer();
       drawRemotePlayers();
       drawSafeRoomOverlay(safeSequence);
     }
@@ -12015,8 +12396,9 @@
     drawTheVoidOverlay();
     drawModifierScreenFx();
     drawInteractionHint();
-    if (state !== 'menu') { drawInventoryHud(); drawPowerHud(); }
+    if (state !== 'menu' && state !== 'spectating') { drawInventoryHud(); drawPowerHud(); }
     drawNoteOverlay();
+    if (state === 'spectating') drawSpectatorOverlay();
 
     if (state === 'introFall' && fallCutscene) {
       ctx.save();
