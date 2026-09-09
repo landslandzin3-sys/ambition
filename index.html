@@ -2247,6 +2247,7 @@
           <div><kbd>S</kbd><span>agachar para passar por estacas do teto</span></div>
           <div><kbd>F</kbd><span>usar Flower, se tiver a carta</span></div>
           <div><kbd>R</kbd><span>ativar Rage quando a barra estiver cheia</span></div>
+          <div><kbd>G</kbd><span>recarregar a lanterna usando 1 bateria</span></div>
           <div><kbd>Esc</kbd><span>pausar</span></div>
         </div>
         <p class="panel-note">Dica do Guia: se encostar em uma parede de pedra e pular, o stickman dá um mortal para ganhar mais altura. Carrinhos e elevadores são raros e servem para mudar o ritmo da run.</p>
@@ -2934,7 +2935,7 @@
       pauseTitle: 'Pausa', pauseTop: 'jogo pausado', pauseDesc: 'Respire um pouco. As minas continuam esperando.', resume: 'Continuar', menu: 'Menu',
       overTop: 'fim da corrida', overTitle: 'Queda', retry: 'Tentar de novo', overDefault: 'Você chegou longe, mas a mina venceu desta vez.',
       guideKicker: 'guia da mina', guideTitle: 'Tutorial', guideSpeech: '<strong>“Ei, corredor. Eu sou o Guia da Mina.”</strong><br>Sua missão é seguir pela direita, abrir portas e chegar o mais longe possível. A cada 50 portas, você cai em uma sala segura para escolher uma carta de poder.',
-      move: 'andar e correr', jump: 'pular', duck: 'agachar para passar por estacas do teto', flower: 'usar Flower, se tiver a carta', rage: 'ativar Rage quando a barra estiver cheia', pauseKey: 'pausar',
+      move: 'andar e correr', jump: 'pular', duck: 'agachar para passar por estacas do teto', flower: 'usar Flower, se tiver a carta', rage: 'ativar Rage quando a barra estiver cheia', flashlightReload: 'recarregar a lanterna usando 1 bateria', pauseKey: 'pausar',
       guideNote: 'Dica do Guia: se encostar em uma parede de pedra e pular, o stickman dá um mortal para ganhar mais altura. Carrinhos e elevadores são raros e servem para mudar o ritmo da run.',
       options: 'opções', camShake: 'Tremor da câmera', camShakeDesc: 'impactos, rage e carrinhos balançam a tela', particles: 'Partículas', particlesDesc: 'poeira, faíscas, flores e pedras quebrando', lights: 'Luzes fortes', lightsDesc: 'brilhos de cavernas, lâmpadas e coroa', hud: 'Mostrar HUD', hudDesc: 'porta atual, distância, recorde e poderes',
       jukeTitle: 'Juke Box', jukeDesc: 'Escolha um MP3 do seu aparelho ou cole um link do YouTube. A música começa quando o stickman cai no chão e a run realmente inicia.', jukePlaceholder: 'Link do YouTube ou URL de áudio', saveLink: 'Salvar link', clear: 'Limpar', youtubeWarning: 'Aviso: nem todos os vídeos do YouTube vão funcionar, por causa do navegador, direitos autorais, bloqueio de incorporação ou autoplay.',
@@ -2950,7 +2951,7 @@
       pauseTitle: 'Pause', pauseTop: 'game paused', pauseDesc: 'Take a breath. The mines are still waiting.', resume: 'Resume', menu: 'Menu',
       overTop: 'run ended', overTitle: 'Fall', retry: 'Try again', overDefault: 'You got far, but the mine won this time.',
       guideKicker: 'mine guide', guideTitle: 'Tutorial', guideSpeech: '<strong>“Hey, runner. I am the Mine Guide.”</strong><br>Your mission is to move right, open doors, and get as far as possible. Every 50 doors, you drop into a safe room and choose a power card.',
-      move: 'walk and run', jump: 'jump', duck: 'crouch under ceiling stakes', flower: 'use Flower, if you have the card', rage: 'activate Rage when the bar is full', pauseKey: 'pause',
+      move: 'walk and run', jump: 'jump', duck: 'crouch under ceiling stakes', flower: 'use Flower, if you have the card', rage: 'activate Rage when the bar is full', flashlightReload: 'reload the flashlight using 1 battery', pauseKey: 'pause',
       guideNote: 'Guide tip: if you touch a stone wall and jump, the stickman flips upward for extra height. Minecarts and elevators are rare and change the rhythm of the run.',
       options: 'options', camShake: 'Camera shake', camShakeDesc: 'impacts, rage and minecarts shake the screen', particles: 'Particles', particlesDesc: 'dust, sparks, flowers and breaking stones', lights: 'Strong lights', lightsDesc: 'cave glows, lamps and crown light', hud: 'Show HUD', hudDesc: 'current door, distance, best and powers',
       jukeTitle: 'Juke Box', jukeDesc: 'Choose an MP3 from your device or paste a YouTube link. The music starts when the stickman hits the ground and the run truly begins.', jukePlaceholder: 'YouTube link or audio URL', saveLink: 'Save link', clear: 'Clear', youtubeWarning: 'Warning: not every YouTube video will work because of browser limits, copyright, embed blocking or autoplay rules.',
@@ -2999,7 +3000,7 @@
     setText('#gameOver .menu-topline', tr('overTop')); setText('#gameOver .title', tr('overTitle')); setText('#gameOverText', tr('overDefault'));
     setText('#tutorialPanel .panel-kicker', tr('guideKicker')); setText('#tutorialPanel h2', tr('guideTitle')); setHtml('.tutorial-speech', tr('guideSpeech'));
     const spans = document.querySelectorAll('.tutorial-grid span');
-    [tr('move'), tr('jump'), tr('duck'), tr('flower'), tr('rage'), tr('pauseKey')].forEach((v,i)=>{ if (spans[i]) spans[i].textContent = v; });
+    [tr('move'), tr('jump'), tr('duck'), tr('flower'), tr('rage'), tr('flashlightReload'), tr('pauseKey')].forEach((v,i)=>{ if (spans[i]) spans[i].textContent = v; });
     setText('#tutorialPanel .panel-note', tr('guideNote'));
     setText('#settingsPanel .panel-kicker', tr('options'));
     const rows = document.querySelectorAll('.settings-list .setting-row');
@@ -4055,6 +4056,24 @@
     itemState.batteries -= 1;
     itemState.flashlightCharge = 100;
     saveMetaProgress();
+    return true;
+  }
+
+  function manualReloadFlashlight() {
+    if (getSelectedInventoryItem() !== 'flashlight' || !itemState.flashlight) return false;
+
+    if (itemState.flashlightCharge >= 99.999) {
+      showToast(uiText('A lanterna já está com carga máxima.', 'The flashlight is already fully charged.'));
+      return false;
+    }
+
+    if (itemState.batteries <= 0) {
+      showToast(uiText('Você não tem baterias para recarregar a lanterna.', 'You have no batteries to reload the flashlight.'));
+      return false;
+    }
+
+    if (!reloadFlashlightBattery()) return false;
+    showToast(uiText('Lanterna recarregada. -1 bateria.', 'Flashlight reloaded. -1 battery.'));
     return true;
   }
 
@@ -6134,6 +6153,10 @@
       }
     }
     if (e.code === 'KeyL' && getSelectedInventoryItem() === 'flashlight') toggleFlashlight();
+    if (e.code === 'KeyG' && ['playing', 'safe', 'root', 'depths'].includes(state) && getSelectedInventoryItem() === 'flashlight') {
+      e.preventDefault();
+      manualReloadFlashlight();
+    }
 
     if (e.code === 'Escape') {
       if (state === 'root' && rootEncounter) rootEncounter.paused = !rootEncounter.paused;
