@@ -1794,13 +1794,31 @@
     }
     #mpNetBadge.show { display:flex; }
 
-    #mpAdminBtn.admin-enabled {
+    #mpAdminBtn.admin-enabled,
+    #mpAdminSetupBtn.admin-enabled {
       border-color: rgba(225,232,235,.42) !important;
       background: linear-gradient(180deg, rgba(95,104,110,.64), rgba(34,39,43,.86)) !important;
       color: #eef2f4 !important;
       box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 28px rgba(0,0,0,.24) !important;
     }
-    #mpAdminBtn[disabled] { opacity:.46; cursor:not-allowed; transform:none !important; filter:grayscale(.35); }
+    #mpAdminBtn[disabled], #mpAdminSetupBtn[disabled] { opacity:.46; cursor:not-allowed; transform:none !important; filter:grayscale(.35); }
+    .mp-admin-setup-actions {
+      margin-top:10px;
+      padding-top:12px;
+      border-top:1px solid rgba(255,255,255,.07);
+    }
+    #mpAdminSetupBtn {
+      min-width:190px;
+      border-color:rgba(200,210,216,.24);
+      background:linear-gradient(180deg, rgba(65,72,77,.55), rgba(24,28,31,.76));
+      color:#eef2f4;
+    }
+    .mp-admin-setup-note {
+      margin-top:8px;
+      color:rgba(230,236,239,.58);
+      font-size:11px;
+      line-height:1.45;
+    }
     #mpNetDot { width:8px; height:8px; border-radius:50%; background:#9bd6a5; box-shadow:0 0 12px rgba(155,214,165,.5); }
     @media(max-width:760px){ .mp-grid{grid-template-columns:1fr;} }
 
@@ -2325,6 +2343,10 @@
             <button id="mpCreateBtn" type="button">Criar sala</button>
             <button id="mpJoinBtn" class="secondary" type="button">Entrar na sala</button>
           </div>
+          <div class="mp-actions mp-admin-setup-actions">
+            <button id="mpAdminSetupBtn" class="secondary" type="button">ADMIN PANEL</button>
+          </div>
+          <div class="mp-admin-setup-note" id="mpAdminSetupNote">Ative antes de criar uma sala para iniciar uma Admin Run multiplayer.</div>
           <div class="mp-status" id="mpStatus">Supabase Realtime pronto para conectar.</div>
         </div>
 
@@ -2599,6 +2621,8 @@
   const mpLobbyStatus = document.getElementById('mpLobbyStatus');
   const mpPlayers = document.getElementById('mpPlayers');
   const mpAdminBtn = document.getElementById('mpAdminBtn');
+  const mpAdminSetupBtn = document.getElementById('mpAdminSetupBtn');
+  const mpAdminSetupNote = document.getElementById('mpAdminSetupNote');
   const mpStartBtn = document.getElementById('mpStartBtn');
   const mpLeaveBtn = document.getElementById('mpLeaveBtn');
   const mpNetBadge = document.getElementById('mpNetBadge');
@@ -3267,12 +3291,28 @@
   }
 
   function mpSyncAdminButton() {
-    if (!mpAdminBtn) return;
     const plannedAdmin = !!(adminState.enabled || multiplayer.adminRun);
-    mpAdminBtn.classList.toggle('admin-enabled', plannedAdmin);
-    mpAdminBtn.textContent = plannedAdmin
+    const label = plannedAdmin
       ? uiText('ADMIN PANEL · ATIVO', 'ADMIN PANEL · ACTIVE')
       : 'ADMIN PANEL';
+
+    if (mpAdminSetupBtn) {
+      mpAdminSetupBtn.classList.toggle('admin-enabled', plannedAdmin);
+      mpAdminSetupBtn.textContent = label;
+      mpAdminSetupBtn.disabled = !!(multiplayer.active && multiplayer.connected);
+      mpAdminSetupBtn.title = multiplayer.active && multiplayer.connected
+        ? uiText('Configure pelo botão do lobby.', 'Configure it using the lobby button.')
+        : uiText('Configure o Admin antes de criar a sala.', 'Configure Admin before creating the room.');
+    }
+    if (mpAdminSetupNote) {
+      mpAdminSetupNote.textContent = plannedAdmin
+        ? uiText('ADMIN ATIVO · ao criar a sala, ela será uma Admin Run sem badges ou recompensas.', 'ADMIN ACTIVE · creating a room will make it an Admin Run with no badges or rewards.')
+        : uiText('Ative antes de criar uma sala para iniciar uma Admin Run multiplayer.', 'Enable before creating a room to start a multiplayer Admin Run.');
+    }
+
+    if (!mpAdminBtn) return;
+    mpAdminBtn.classList.toggle('admin-enabled', plannedAdmin);
+    mpAdminBtn.textContent = label;
     mpAdminBtn.disabled = !!(multiplayer.active && multiplayer.connected && (!multiplayer.isHost || multiplayer.started));
     mpAdminBtn.title = multiplayer.active && multiplayer.connected && !multiplayer.isHost
       ? uiText('Somente o HOST escolhe se a sala será uma Admin Run.', 'Only the HOST can choose whether the room is an Admin Run.')
@@ -4204,6 +4244,7 @@
       el?.classList.toggle('hidden-panel', panel !== key);
     }
     if (panel === 'achievements') renderAchievementsPanel();
+    if (panel === 'multiplayer') mpSyncAdminButton();
     if (panel) refreshRunSetupUi();
   }
 
@@ -6814,6 +6855,13 @@
   mpBackBtn?.addEventListener('click', () => openMenuPanel('modes'));
   mpCreateBtn?.addEventListener('click', mpCreateRoom);
   mpJoinBtn?.addEventListener('click', mpJoinRoom);
+  mpAdminSetupBtn?.addEventListener('click', () => {
+    if (multiplayer.active && multiplayer.connected) {
+      showToast(uiText('Use o Admin Panel do lobby depois de conectar.', 'Use the lobby Admin Panel after connecting.'));
+      return;
+    }
+    openAdminPanel();
+  });
   mpAdminBtn?.addEventListener('click', () => {
     if (multiplayer.active && multiplayer.connected && !multiplayer.isHost) {
       showToast(uiText('Somente o HOST pode configurar o Admin Panel da sala.', 'Only the HOST can configure the room Admin Panel.'));
