@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ambition — The Depths Update</title>
+  <title>Ambition — What Lies Beneath</title>
   <style>
     :root {
       --gold: #f4c76b;
@@ -1793,12 +1793,20 @@
       pointer-events:none;
     }
     #mpNetBadge.show { display:flex; }
+
+    #mpAdminBtn.admin-enabled {
+      border-color: rgba(225,232,235,.42) !important;
+      background: linear-gradient(180deg, rgba(95,104,110,.64), rgba(34,39,43,.86)) !important;
+      color: #eef2f4 !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 28px rgba(0,0,0,.24) !important;
+    }
+    #mpAdminBtn[disabled] { opacity:.46; cursor:not-allowed; transform:none !important; filter:grayscale(.35); }
     #mpNetDot { width:8px; height:8px; border-radius:50%; background:#9bd6a5; box-shadow:0 0 12px rgba(155,214,165,.5); }
     @media(max-width:760px){ .mp-grid{grid-template-columns:1fr;} }
 
 
 
-    /* --- THE DEPTHS UPDATE · cold gray menu redesign --- */
+    /* --- WHAT LIES BENEATH · cold gray menu redesign --- */
     #menu.menu-overlay {
       background:
         radial-gradient(circle at 78% 40%, rgba(170,180,188,.10), transparent 34%),
@@ -2213,7 +2221,7 @@
         <div class="menu-brand">
           <div class="brand-small">corrida infinita nas minas</div>
           <h1>Ambition</h1>
-          <div class="menu-update-tag">THE DEPTHS UPDATE</div>
+          <div class="menu-update-tag">WHAT LIES BENEATH</div>
           <p>Entre na caverna, abra portas numeradas, sobreviva aos obstáculos e escolha cartas nas salas seguras.</p>
         </div>
 
@@ -2326,6 +2334,7 @@
           <div class="mp-status good" id="mpLobbyStatus">Conectado.</div>
           <div class="mp-players" id="mpPlayers"></div>
           <div class="mp-actions">
+            <button id="mpAdminBtn" class="secondary" type="button">ADMIN PANEL</button>
             <button id="mpStartBtn" class="mp-hidden" type="button">START</button>
             <button id="mpLeaveBtn" class="secondary" type="button">Sair da sala</button>
           </div>
@@ -2589,6 +2598,7 @@
   const mpRoomCodeLabel = document.getElementById('mpRoomCodeLabel');
   const mpLobbyStatus = document.getElementById('mpLobbyStatus');
   const mpPlayers = document.getElementById('mpPlayers');
+  const mpAdminBtn = document.getElementById('mpAdminBtn');
   const mpStartBtn = document.getElementById('mpStartBtn');
   const mpLeaveBtn = document.getElementById('mpLeaveBtn');
   const mpNetBadge = document.getElementById('mpNetBadge');
@@ -2739,7 +2749,12 @@
     noteBruinble: false,
     slots: ['flashlight', null, null],
     selectedSlot: 0,
-    flashlightOn: false
+    flashlightOn: false,
+    // WHAT LIES BENEATH — run-only exploration inventory.
+    doorKeys: {},
+    ambitionItems: {},
+    ambitionItemUses: {},
+    ambitionSelected: 0
   };
   let interactionHint = null;
   const SMOKER_NOTE_REFERENCE_SRC = 'data:image/png;base64,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';
@@ -3169,7 +3184,8 @@
     runSeed: 0,
     sharedOpenedDoors: new Set(),
     joinIntent: 'join',
-    joinCheckTimer: null
+    joinCheckTimer: null,
+    adminRun: false
   };
 
 
@@ -3180,6 +3196,27 @@
     lastDoor: null,
     lastPeerState: ''
   };
+
+  // Multiplayer hostile-entity authority.
+  // In a multiplayer run the HOST decides the shared entity timeline once,
+  // then every client receives the same spawn and plays it locally.
+  const mpEntitySync = {
+    pending: [],
+    seen: new Set(),
+    processedDoors: new Set(),
+    seq: 0,
+    deeperReadyDoor: 15,
+    lastScheduledDoor: -999
+  };
+
+  function resetMpEntitySync() {
+    mpEntitySync.pending.length = 0;
+    mpEntitySync.seen.clear();
+    mpEntitySync.processedDoors.clear();
+    mpEntitySync.seq = 0;
+    mpEntitySync.deeperReadyDoor = 15;
+    mpEntitySync.lastScheduledDoor = -999;
+  }
 
   // THE VOID — multiplayer anti-separation entity.
   // It never deals damage. If a player falls 10+ rooms behind, it catches them up.
@@ -3229,6 +3266,19 @@
     return players.filter(p => p.id && !seen.has(p.id) && seen.add(p.id));
   }
 
+  function mpSyncAdminButton() {
+    if (!mpAdminBtn) return;
+    const plannedAdmin = !!(adminState.enabled || multiplayer.adminRun);
+    mpAdminBtn.classList.toggle('admin-enabled', plannedAdmin);
+    mpAdminBtn.textContent = plannedAdmin
+      ? uiText('ADMIN PANEL · ATIVO', 'ADMIN PANEL · ACTIVE')
+      : 'ADMIN PANEL';
+    mpAdminBtn.disabled = !!(multiplayer.active && multiplayer.connected && (!multiplayer.isHost || multiplayer.started));
+    mpAdminBtn.title = multiplayer.active && multiplayer.connected && !multiplayer.isHost
+      ? uiText('Somente o HOST escolhe se a sala será uma Admin Run.', 'Only the HOST can choose whether the room is an Admin Run.')
+      : '';
+  }
+
   function mpRenderLobby() {
     const players = mpGetPresencePlayers();
     let host = players.find(p => p.host);
@@ -3250,7 +3300,11 @@
       }
     }
     mpStartBtn?.classList.toggle('mp-hidden', !multiplayer.isHost || multiplayer.started);
-    if (mpLobbyStatus) mpLobbyStatus.textContent = `${players.length} jogador${players.length === 1 ? '' : 'es'} conectado${players.length === 1 ? '' : 's'}${multiplayer.isHost ? ' · você é o HOST' : ''}`;
+    mpSyncAdminButton();
+    if (mpLobbyStatus) {
+      const adminLabel = (adminState.enabled || multiplayer.adminRun) ? uiText(' · ADMIN RUN', ' · ADMIN RUN') : '';
+      mpLobbyStatus.textContent = `${players.length} jogador${players.length === 1 ? '' : 'es'} conectado${players.length === 1 ? '' : 's'}${multiplayer.isHost ? ' · você é o HOST' : ''} · ${uiText('ENTIDADES SINCRONIZADAS','ENTITIES SYNCED')}${adminLabel}`;
+    }
   }
 
   async function mpTrackPresence() {
@@ -3288,7 +3342,9 @@
     multiplayer.peers.clear();
     multiplayer.localWorldX = 0;
     multiplayer.runSeed = 0;
+    multiplayer.adminRun = false;
     multiplayer.sharedOpenedDoors.clear();
+    resetMpEntitySync();
     spectator.active=false;spectator.targetId=null;spectator.sceneMode='';
     theVoidEvent = null;
     theVoidCooldown = 0;
@@ -3393,16 +3449,190 @@
     }
   }
 
+  function mpEntityBusy() {
+    return !!(bipEvent || smokerEvent || bruinbleEvent || stalkerEvent);
+  }
+
+  function mpEntityEventId(entity, triggerDoor) {
+    mpEntitySync.seq += 1;
+    return `${multiplayer.runSeed || 0}:${Math.max(1, Math.floor(Number(triggerDoor) || 1))}:${entity}:${mpEntitySync.seq}`;
+  }
+
+  function mpQueueEntityEvent(data) {
+    if (!data || !multiplayer.active || !multiplayer.started) return false;
+    const entity = String(data.entity || '').toLowerCase();
+    if (!['deeper','smoker','bruinble','stalker'].includes(entity)) return false;
+    const id = String(data.eventId || `${entity}:${data.triggerDoor || 0}:${data.createdAt || 0}`);
+    if (mpEntitySync.seen.has(id)) return false;
+    mpEntitySync.seen.add(id);
+    mpEntitySync.pending.push({
+      eventId:id,
+      entity,
+      triggerDoor:Math.max(1, Math.floor(Number(data.triggerDoor) || 1)),
+      payload:(data.payload && typeof data.payload === 'object') ? data.payload : {},
+      createdAt:Number(data.createdAt) || Date.now()
+    });
+    mpEntitySync.pending.sort((a,b) => a.triggerDoor - b.triggerDoor || a.createdAt - b.createdAt);
+    return true;
+  }
+
+  function mpEmitEntityEvent(entity, triggerDoor, payload = {}) {
+    if (!multiplayer.active || !multiplayer.started || !multiplayer.isHost) return false;
+    const packet = {
+      type:'entity_spawn',
+      eventId:mpEntityEventId(entity, triggerDoor),
+      entity,
+      triggerDoor:Math.max(1, Math.floor(Number(triggerDoor) || 1)),
+      payload,
+      createdAt:Date.now(),
+      by:multiplayer.playerId
+    };
+    // self:false means the host will not receive its own broadcast, so enqueue locally too.
+    mpQueueEntityEvent(packet);
+    mpBroadcast('room_control', packet);
+    return true;
+  }
+
+  function mpFindDoorByNumber(number) {
+    const n = Math.max(1, Math.floor(Number(number) || 1));
+    return doors.find(d => d && d.number === n) || null;
+  }
+
+  function mpStartQueuedEntity(ev) {
+    if (!ev || state !== 'playing' || routeSequence || safeSequence) return false;
+    if (mpEntityBusy()) return false;
+    // The entity belongs to the room that was just opened. If this client is behind,
+    // keep it queued until they reach the exact shared room instead of spawning it early.
+    if (doorNumber <= ev.triggerDoor) return false;
+
+    if (ev.entity === 'deeper') {
+      if (!deeperCanStart()) return false;
+      bipEvent = { phase:'warn', t:0, x:-240, y:currentFloorY(), killed:false, flash:0, syncId:ev.eventId, warningDuration:8 };
+      cameraShake = Math.max(cameraShake, 3.8);
+      return true;
+    }
+
+    if (ev.entity === 'smoker') {
+      if (!smokerCanStart()) return false;
+      smokerSignalDoor = null;
+      smokerEvent = {
+        phase:'warning', t:0, warningDuration:4, x:W+280, y:currentFloorY(),
+        retreat:0, escaped:false, flash:0, smokeT:0, syncId:ev.eventId
+      };
+      return true;
+    }
+
+    if (ev.entity === 'bruinble') {
+      if (!bruinbleCanStart()) return false;
+      const preferredDoor = mpFindDoorByNumber(ev.payload?.lampDoorNumber);
+      let anchor = null;
+      if (preferredDoor) anchor = getStandingLanternAnchor(preferredDoor, Number(ev.payload?.lampIndex) || 0);
+      if (!anchor) anchor = findBruinbleLanternAnchor();
+      const lampX = anchor ? anchor.x : Math.max(player.x + 180, W * .68);
+      const lampY = anchor ? anchor.y : currentFloorY();
+      bruinbleEvent = {
+        phase:'preflash', lampDoor:anchor ? anchor.door : null, lampIndex:anchor ? anchor.index : 0,
+        lampX, lampY, preflashT:0, preflashDuration:2, t:0, duration:5,
+        attackT:0, attackX:lampX, attackY:lampY-214, flash:0, syncId:ev.eventId
+      };
+      return true;
+    }
+
+    if (ev.entity === 'stalker') {
+      if (!stalkerCanStart()) return false;
+      const sideOffset = clamp(Number(ev.payload?.sideOffset) || 140, 105, 195);
+      stalkerEvent = {
+        t:0, duration:2.65,
+        x:Math.max(42, player.x - sideOffset), y:currentFloorY(),
+        sway:Number.isFinite(Number(ev.payload?.sway)) ? Number(ev.payload.sway) : 0,
+        hit:false, syncId:ev.eventId
+      };
+      blackoutFlashPulse = Math.max(blackoutFlashPulse, .42);
+      rootSound(58,.28,true);
+      return true;
+    }
+    return false;
+  }
+
+  function mpProcessPendingEntityEvents() {
+    if (!multiplayer.active || !multiplayer.started || !mpEntitySync.pending.length) return;
+    if (state !== 'playing' || routeSequence || safeSequence || mpEntityBusy()) return;
+
+    // Never stack two hostile entities locally. Old events stay queued until the current one ends.
+    for (let i = 0; i < mpEntitySync.pending.length; i++) {
+      const ev = mpEntitySync.pending[i];
+      if (doorNumber <= ev.triggerDoor) break;
+      if (isSafeRoomBufferDoor(ev.triggerDoor)) {
+        mpEntitySync.pending.splice(i, 1);
+        i--;
+        continue;
+      }
+      if (mpStartQueuedEntity(ev)) {
+        mpEntitySync.pending.splice(i, 1);
+        return;
+      }
+    }
+  }
+
+  function mpHostScheduleDoorEntity(openedNumber) {
+    if (!multiplayer.active || !multiplayer.started || !multiplayer.isHost) return;
+    const n = Math.max(1, Math.floor(Number(openedNumber) || 1));
+    if (mpEntitySync.processedDoors.has(n)) return;
+    mpEntitySync.processedDoors.add(n);
+    if (isSafeRoomBufferDoor(n) || n === 250 || n === 500) return;
+
+    // A small shared spacing prevents a second creature being scheduled on top of the first one.
+    if (n <= mpEntitySync.lastScheduledDoor + 2) return;
+
+    const seedBase = (multiplayer.runSeed || 1) * .019 + n * 197.713;
+    let entity = null;
+    let triggerDoor = n;
+    let payload = {};
+
+    // Same general progression as the solo logic, but the roll happens ONCE on the host.
+    if (n >= 15 && n >= mpEntitySync.deeperReadyDoor && seededRandom(seedBase + 11) < .30) {
+      entity = 'deeper';
+      const cooldown = 4 + Math.floor(seededRandom(seedBase + 12) * 4);
+      mpEntitySync.deeperReadyDoor = n + cooldown;
+    } else if (n >= 30 && seededRandom(seedBase + 21) < .28) {
+      // Smoker warns on one door and attacks on the next, like the original system.
+      triggerDoor = n + 1;
+      if (!isSafeRoomBufferDoor(triggerDoor)) entity = 'smoker';
+    } else if (n >= 50 && seededRandom(seedBase + 31) < .22) {
+      entity = 'bruinble';
+      // If the host currently has that room loaded, share which lantern was chosen too.
+      const anchor = findBruinbleLanternAnchor();
+      if (anchor?.door) payload = { lampDoorNumber:anchor.door.number, lampIndex:anchor.index || 0 };
+    }
+
+    if (!entity) return;
+    mpEntitySync.lastScheduledDoor = triggerDoor;
+    mpEmitEntityEvent(entity, triggerDoor, payload);
+  }
+
   function mpHandleControl(payload) {
     const data = payload?.payload || payload;
     if (!data) return;
     if (data.type === 'start') {
       multiplayer.started = true;
+      multiplayer.adminRun = !!data.adminRun;
       multiplayer.runSeed = Math.max(1, Math.floor(Number(data.seed) || multiplayer.runSeed || 1));
       multiplayer.localWorldX = 0;
       multiplayer.sharedOpenedDoors.clear();
+      resetMpEntitySync();
       theVoidEvent = null;
       theVoidCooldown = 0;
+      if (multiplayer.adminRun) {
+        adminState.enabled = true;
+        adminState.runUsed = true;
+        adminSetStatus('Admin Run multiplayer ativa. Sem badges, recorde ou recompensas.', 'Multiplayer Admin Run active. No badges, record or rewards.');
+      } else if (!multiplayer.isHost) {
+        adminState.enabled = false;
+        adminState.runUsed = false;
+        adminState.godMode = false;
+        adminState.infiniteStamina = false;
+      }
+      syncAdminUi();
       mpTrackPresence();
       mpRenderLobby();
       startGame();
@@ -3410,7 +3640,17 @@
       mpNetBadge?.classList.add('show');
       return;
     }
-    if (data.type === 'door_open') { mpApplyRemoteDoor(data.door); return; }
+    if (data.type === 'door_open') {
+      mpApplyRemoteDoor(data.door);
+      // Whoever opens a room first tells the HOST; the HOST rolls that room exactly once.
+      if (multiplayer.isHost) mpHostScheduleDoorEntity(data.door);
+      return;
+    }
+    if (data.type === 'entity_spawn') {
+      mpQueueEntityEvent(data);
+      mpProcessPendingEntityEvents();
+      return;
+    }
     if (data.type === 'depths_start') { if (depthsEncounter && depthsEncounter.phase === 'checkpoint') beginDepthsCinematic(); return; }
     if (data.type === 'depths_puzzle') { applyRemoteDepthsPuzzle(data.index); return; }
     if (data.type === 'depths_door') { applyRemoteDepthsDoor(data.index, data.name); return; }
@@ -3442,6 +3682,12 @@
     }
     await mpLeaveRoom(true);
     multiplayer.playerName = mpSanitizeName(mpNameInput?.value);
+    if (!createRoom && adminState.enabled) {
+      adminState.enabled = false;
+      adminState.godMode = false;
+      adminState.infiniteStamina = false;
+      syncAdminUi();
+    }
     try { localStorage.setItem('ambition.multiplayerName', multiplayer.playerName); } catch {}
     if (mpNameInput) mpNameInput.value = multiplayer.playerName;
     multiplayer.roomCode = code;
@@ -3498,13 +3744,21 @@
   async function mpStartRoom() {
     if (!multiplayer.active || !multiplayer.connected || !multiplayer.isHost) return;
     multiplayer.started = true;
+    multiplayer.adminRun = !!adminState.enabled;
     multiplayer.runSeed = 100000 + Math.floor(Math.random() * 900000000);
     multiplayer.localWorldX = 0;
     multiplayer.sharedOpenedDoors.clear();
+    resetMpEntitySync();
     theVoidEvent = null;
     theVoidCooldown = 0;
     await mpTrackPresence();
-    await mpBroadcast('room_control', { type:'start', hostId:multiplayer.playerId, startedAt:Date.now(), seed:multiplayer.runSeed });
+    await mpBroadcast('room_control', {
+      type:'start',
+      hostId:multiplayer.playerId,
+      startedAt:Date.now(),
+      seed:multiplayer.runSeed,
+      adminRun:multiplayer.adminRun
+    });
     startGame();
     if (mpNetText) mpNetText.textContent = `ROOM ${multiplayer.roomCode}`;
     mpNetBadge?.classList.add('show');
@@ -4126,6 +4380,10 @@
     itemState.noteBruinble = false;
     itemState.selectedSlot = 0;
     itemState.flashlightOn = false;
+    itemState.doorKeys = {};
+    itemState.ambitionItems = {};
+    itemState.ambitionItemUses = {};
+    itemState.ambitionSelected = 0;
     syncItemSlots();
     noteOverlayOpen = false;
     noteOverlayType = null;
@@ -4566,9 +4824,14 @@
     }
     adminRunBadge?.classList.toggle('show', !!adminState.runUsed && inRun);
     adminHudBtn?.classList.toggle('show', !!(adminState.enabled || adminState.runUsed) && inRun && state !== 'gameover');
+    mpSyncAdminButton();
   }
 
   function activateAdminMode() {
+    if (multiplayer.active && multiplayer.connected && !multiplayer.started && !multiplayer.isHost) {
+      adminSetStatus('Somente o HOST pode ativar o Admin antes de iniciar a sala.', 'Only the HOST can enable Admin before starting the room.');
+      return;
+    }
     const wasNormalRun = adminIsRunState() && !adminState.runUsed;
     adminState.enabled = true;
     if (wasNormalRun) {
@@ -4578,6 +4841,7 @@
     adminSetStatus('Admin ativado. Esta run não pode receber recompensas.', 'Admin enabled. This run cannot receive rewards.');
     renderAdminTools();
     syncAdminUi();
+    if (multiplayer.active && multiplayer.connected && !multiplayer.started) mpRenderLobby();
     updateHud();
   }
 
@@ -4590,6 +4854,7 @@
       adminState.runUsed ? 'Admin disabled. The current run is still invalid.' : 'Admin disabled.'
     );
     syncAdminUi();
+    if (multiplayer.active && multiplayer.connected && !multiplayer.started) mpRenderLobby();
   }
 
   function openAdminPanel() {
@@ -5127,7 +5392,10 @@
     clearRootEncounter();
     worldSpeed = 0;
     distance = 0;
-    if (multiplayer.active && multiplayer.started) multiplayer.localWorldX = 0;
+    if (multiplayer.active && multiplayer.started) {
+      multiplayer.localWorldX = 0;
+      resetMpEntitySync();
+    }
     doorNumber = 1;
     nextDoorX = W + 220;
     nextObstacleX = W + 620;
@@ -5536,9 +5804,83 @@
     return null;
   }
 
+  const AMBITION_ITEM_DEFS = {
+    mineralLantern:{namePt:'Lanterna de Minério',nameEn:'Miner Lantern',icon:'✦',passive:true},
+    vibrationSensor:{namePt:'Sensor de Vibração',nameEn:'Vibration Sensor',icon:'⌁',passive:true},
+    luminescentSpray:{namePt:'Spray Luminescente',nameEn:'Luminescent Spray',icon:'✧',uses:3},
+    improvisedBattery:{namePt:'Bateria Improvisada',nameEn:'Improvised Battery',icon:'▣',uses:1},
+    rootCutter:{namePt:'Corta-Raiz',nameEn:'Root Cutter',icon:'✂',uses:3},
+    fuseDetector:{namePt:'Detector de Fusível',nameEn:'Fuse Detector',icon:'⌖',passive:true},
+    rustyKey:{namePt:'Chave Enferrujada',nameEn:'Rusty Key',icon:'⚿',uses:2},
+    greenFlare:{namePt:'Sinalizador Verde',nameEn:'Green Flare',icon:'▲',uses:2},
+    tornMap:{namePt:'Mapa Rasgado',nameEn:'Torn Map',icon:'▤',passive:true},
+    rubberBoots:{namePt:'Botas de Borracha',nameEn:'Rubber Boots',icon:'∪',passive:true},
+    insulatingTape:{namePt:'Fita Isolante',nameEn:'Insulating Tape',icon:'◫',uses:2},
+    sporeCapsule:{namePt:'Cápsula de Esporos',nameEn:'Spore Capsule',icon:'◉',uses:2},
+    brokenWatch:{namePt:'Relógio de Pulso Quebrado',nameEn:'Broken Wristwatch',icon:'◷',passive:true},
+    rootFragment:{namePt:'Fragmento de Raiz',nameEn:'Root Fragment',icon:'⌇',passive:true},
+    maintenanceCard:{namePt:'Cartão de Manutenção',nameEn:'Maintenance Card',icon:'▥',passive:true},
+    ambitionEye:{namePt:'Olho da Ambição',nameEn:'Eye of Ambition',icon:'◉',uses:2}
+  };
+  const AMBITION_ITEM_IDS = Object.keys(AMBITION_ITEM_DEFS);
+  function hasAmbitionItem(id){ return !!itemState.ambitionItems[id]; }
+  function ambitionItemUses(id){ return Math.max(0, Number(itemState.ambitionItemUses[id] || 0)); }
+  function giveAmbitionItem(id, uses=null, announce=true){
+    const def=AMBITION_ITEM_DEFS[id]; if(!def)return false;
+    itemState.ambitionItems[id]=true;
+    if(def.uses){ itemState.ambitionItemUses[id]=Math.max(ambitionItemUses(id), uses==null?def.uses:uses); }
+    if(id==='improvisedBattery') addSpareBattery(2);
+    if(announce) showToast(uiText(`Você encontrou: ${def.namePt}.`,`You found: ${def.nameEn}.`));
+    return true;
+  }
+  function consumeAmbitionItem(id, amount=1){
+    if(!hasAmbitionItem(id))return false;
+    const def=AMBITION_ITEM_DEFS[id];
+    if(!def?.uses)return true;
+    const left=ambitionItemUses(id)-amount;
+    itemState.ambitionItemUses[id]=Math.max(0,left);
+    if(left<=0)itemState.ambitionItems[id]=false;
+    return true;
+  }
+  function giveDoorKey(number){
+    const n=Math.max(1,Math.floor(Number(number)||1));
+    itemState.doorKeys[n]=true;
+    if(n===1){ startRoomKeyFound=true; mpBroadcastKeyFound(); }
+    rootSound(760,.12);
+    showToast(uiText(`CHAVE DA PORTA ${n} ENCONTRADA.`,`DOOR ${n} KEY FOUND.`));
+  }
+  function hasDoorKey(number){
+    const n=Math.max(1,Math.floor(Number(number)||1));
+    return !!itemState.doorKeys[n] || (n===1 && startRoomKeyFound);
+  }
+  function takeDoorKey(number){
+    const n=Math.max(1,Math.floor(Number(number)||1));
+    if(itemState.doorKeys[n]) delete itemState.doorKeys[n];
+  }
+  function rootLootAmbitionItem(){
+    const missing=AMBITION_ITEM_IDS.filter(id=>!hasAmbitionItem(id));
+    if(!missing.length)return null;
+    return missing[Math.floor(Math.random()*missing.length)];
+  }
+
   function openDrawer(drawer) {
     if (!drawer || drawerOpened.has(drawer.id)) return;
     drawerOpened.add(drawer.id);
+
+    // Locked doors always place their own key in a nearby drawer.
+    const keyDoor = Number(drawer.item?.keyForDoor || 0);
+    if (keyDoor && !hasDoorKey(keyDoor)) {
+      giveDoorKey(keyDoor);
+      if(drawer.item) drawer.item.keyTaken = true;
+      return;
+    }
+
+    // Close to the Rooted encounter, drawers can already seed the new expedition gear.
+    if (doorNumber >= 205 && Math.random() < .16) {
+      const id = rootLootAmbitionItem();
+      if(id){ giveAmbitionItem(id); return; }
+    }
+
     let luck = Math.random() * modifierDrawerLootBoost();
     if (!itemState.flashlight && doorNumber >= 80 && doorNumber <= 90) luck += .22;
     if (!itemState.flashlight && luck > .92) {
@@ -5757,8 +6099,20 @@
       return;
     }
     if (!stalkerCanStart()) return;
+    // In multiplayer only the HOST owns the Stalker timer. Other clients wait
+    // for the shared entity_spawn packet instead of rolling their own timer.
+    if (multiplayer.active && multiplayer.started && !multiplayer.isHost) return;
     stalkerNext -= dt;
-    if (stalkerNext <= 0) startStalkerEvent();
+    if (stalkerNext <= 0) {
+      if (multiplayer.active && multiplayer.started && multiplayer.isHost) {
+        const sideOffset = 105 + Math.random() * 90;
+        const sway = Math.random() * TAU;
+        mpEmitEntityEvent('stalker', Math.max(1, doorNumber - 1), { sideOffset, sway });
+        stalkerNext = 12 + Math.random() * 16;
+      } else {
+        startStalkerEvent();
+      }
+    }
   }
 
   function updateBlackout(dt) {
@@ -5796,7 +6150,7 @@
       if (isBlackoutZone()) blackoutFlashPulse = Math.max(blackoutFlashPulse, .18);
       if (Math.random() < .22) spawnParticles(player.x + (Math.random() - .5) * 260, groundY - 18 - Math.random() * 90, 1, 'dust');
       bipEvent.flash = Math.sin(bipEvent.t * 40) > 0 ? 1 : 0;
-      if (bipEvent.t > 3.0) {
+      if (bipEvent.t > (Number.isFinite(bipEvent.warningDuration) ? bipEvent.warningDuration : 3.0)) {
         bipEvent.phase = 'rush';
         bipEvent.t = 0;
         bipEvent.x = -280;
@@ -6040,16 +6394,25 @@
     const roomW = isStartRoom ? 2500 : clamp(actualSpacing + 80, 500, 1360);
     let roomItems = makeRoomItems(seed, roomW, template);
     if (isStartRoom) {
-      // Sala 1 é uma grande câmara de entrada: menos entulho e espaço para explorar.
-      roomItems = roomItems.filter((item, index) => index < 6 && item.type !== 'wardrobe');
-      const roomLeft = x - roomW + 118;
-      const keyX = networked
-        ? (620 + seededRandom(seed + 991) * Math.max(220, roomW - 1040))
-        : clamp((W * .62 - roomLeft) + seededRandom(seed + 991) * Math.min(620, W * .48), 620, roomW - 420);
-      roomItems.push({
-        id: 'start_room_key', type: 'startKey', x: keyX, y: 0, scale: 1.15,
-        broken: false, flip: 1, variant: 0, accent: '#ffe29b', taken: false
-      });
+      // WHAT LIES BENEATH: Door 1's key now actually hides in a drawer.
+      roomItems = roomItems.filter((item, index) => index < 7 && item.type !== 'wardrobe');
+      let keyDrawer = roomItems.find(item => item.type === 'drawer');
+      if(!keyDrawer){
+        keyDrawer={id:'start_key_drawer',type:'drawer',x:clamp(roomW*.58,620,roomW-420),y:0,scale:1.05,broken:false,flip:1,variant:0,accent:'#ffe29b'};
+        roomItems.push(keyDrawer);
+      }
+      keyDrawer.keyForDoor=1;
+    }
+    const specialDoor = isStartRoom || number===250 || number===500 || number%50===0 || number===90 || number===140;
+    const keyLocked = isStartRoom || (!specialDoor && number>5 && seededRandom(seed+777) < .13);
+    if(keyLocked && !isStartRoom){
+      let candidates=roomItems.filter(item=>item.type==='drawer');
+      if(!candidates.length){
+        const extra={id:interactiveId(seed,97,'drawer'),type:'drawer',x:clamp(roomW*.42,150,roomW-180),y:0,scale:1,broken:false,flip:1,variant:1,accent:template.accent};
+        roomItems.push(extra);candidates=[extra];
+      }
+      const keyDrawer=candidates[Math.floor(seededRandom(seed+778)*candidates.length)%candidates.length];
+      keyDrawer.keyForDoor=number;
     }
     return {
       x,
@@ -6072,7 +6435,9 @@
       sharedOpen: multiplayer.active && multiplayer.sharedOpenedDoors.has(number),
       shake: 0,
       safeTrap: false,
-      startLocked: isStartRoom
+      startLocked: isStartRoom,
+      keyLocked,
+      keyRequired: keyLocked ? number : null
     };
   }
 
@@ -6297,6 +6662,7 @@
       triggerBruinbleFailure();
     }
     if (e.code === 'KeyE') input.interactPressed = true;
+    if (e.code === 'KeyQ' && state === 'root' && rootEncounter && !rootEncounter.wardrobeGame) { e.preventDefault(); useSelectedAmbitionItem(); }
     if (e.code === 'Digit1') setSelectedSlot(0);
     if (e.code === 'Digit2') setSelectedSlot(1);
     if (e.code === 'Digit3') setSelectedSlot(2);
@@ -6448,6 +6814,13 @@
   mpBackBtn?.addEventListener('click', () => openMenuPanel('modes'));
   mpCreateBtn?.addEventListener('click', mpCreateRoom);
   mpJoinBtn?.addEventListener('click', mpJoinRoom);
+  mpAdminBtn?.addEventListener('click', () => {
+    if (multiplayer.active && multiplayer.connected && !multiplayer.isHost) {
+      showToast(uiText('Somente o HOST pode configurar o Admin Panel da sala.', 'Only the HOST can configure the room Admin Panel.'));
+      return;
+    }
+    openAdminPanel();
+  });
   mpStartBtn?.addEventListener('click', mpStartRoom);
   mpLeaveBtn?.addEventListener('click', () => mpLeaveRoom(false));
   mpRoomCodeInput?.addEventListener('input', () => { mpRoomCodeInput.value = mpNormalizeCode(mpRoomCodeInput.value); });
@@ -6946,7 +7319,8 @@
       d.lockHintT = Math.max(0, (d.lockHintT || 0) - dt);
       const sweptThrough = rageActive > 0 && d.prevX && d.prevX > pr.x + pr.w && d.x < pr.x + pr.w;
       const touchingDoor = sweptThrough || rectsOverlap(pr.x, pr.y, pr.w, pr.h, d.x + 14, d.y + 6, d.w - 28, d.h - 2);
-      if (!d.opened && d.number === doorNumber && touchingDoor && d.number === 1 && !startRoomKeyFound) {
+      const lockedForMe = !d.opened && d.number === doorNumber && touchingDoor && d.keyLocked && !hasDoorKey(d.number) && !d.sharedOpen;
+      if (lockedForMe) {
         worldSpeed = Math.min(0, worldSpeed);
         const stopX = pr.x + pr.w - 12;
         if (d.x < stopX) { const correction = stopX - d.x; d.x += correction; if (Number.isFinite(d.roomX)) d.roomX += correction; }
@@ -6954,11 +7328,12 @@
         if (d.lockHintT <= 0) {
           d.lockHintT = 1.25;
           rootSound(110,.08);
-          showToast(uiText('A Porta 1 está trancada. Procure a chave nesta sala.', 'Door 1 is locked. Find the key in this room.'));
+          showToast(uiText(`A Porta ${d.number} está trancada. A chave está em uma gaveta desta sala.`,`Door ${d.number} is locked. Its key is inside a drawer in this room.`));
         }
         continue;
       }
       if (!d.opened && d.number === doorNumber && touchingDoor) {
+        if(d.keyLocked && hasDoorKey(d.number) && !d.sharedOpen){ takeDoorKey(d.number); rootSound(520,.1); }
         const openedNumber = doorNumber;
         const wasSharedOpen = !!d.sharedOpen || (multiplayer.active && multiplayer.sharedOpenedDoors.has(openedNumber));
         d.opened = true;
@@ -6983,7 +7358,12 @@
         const blockedEntityDoor = isSafeRoomBufferDoor(openedNumber);
         if (blockedEntityDoor) {
           clearHostileEntities(true);
+        } else if (multiplayer.active && multiplayer.started) {
+          // Multiplayer: only the HOST creates the shared entity timeline.
+          // Non-host clients never do their own random roll anymore.
+          if (multiplayer.isHost) mpHostScheduleDoorEntity(openedNumber);
         } else {
+          // Solo keeps the original independent random behavior.
           if (openedNumber >= 15) {
             bipCooldownDoors = Math.max(0, bipCooldownDoors - 1);
             if (bipCooldownDoors <= 0 && deeperCanStart() && Math.random() < 0.30) {
@@ -7467,10 +7847,10 @@
   const rootControls = document.createElement('div');
   rootControls.id = 'rootControls';
   rootControls.style.cssText = 'display:none;position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:45;gap:8px;align-items:center';
-  rootControls.innerHTML = '<button data-root="sprint">Correr</button><button data-root="slow">Devagar</button><button data-root="use">Interagir / E</button><button data-root="pause">Pausar</button>';
+  rootControls.innerHTML = '<button data-root="sprint">Correr</button><button data-root="slow">Devagar</button><button data-root="use">Interagir / E</button><button data-root="item">Item / Q</button><button data-root="pause">Pausar</button>';
   document.body.appendChild(rootControls);
   const rootStyle = document.createElement('style');
-  rootStyle.textContent = '#rootControls button{background:#102322;color:#d8f4d7;border:1px solid #7a9d83;border-radius:8px;padding:12px;font:600 14px system-ui;touch-action:none} body.root-room #flowerTouch,body.root-room #rageTouch{display:none!important}';
+  rootStyle.textContent = '#rootControls button{background:#102322;color:#d8f4d7;border:1px solid #7a9d83;border-radius:8px;padding:12px;font:600 14px system-ui;touch-action:none} body.root-room #flowerTouch,body.root-room #rageTouch{display:none!important}@media(max-width:760px){#rootControls{max-width:96vw;flex-wrap:wrap;justify-content:center}#rootControls button{padding:9px 10px;font-size:12px}}';
   document.head.appendChild(rootStyle);
   let rootSlow = false;
   let rootSprintHeld = false;
@@ -7482,6 +7862,7 @@
   for(const event of ['pointerup','pointercancel','lostpointercapture'])rootSprintButton.addEventListener(event,()=>{rootSprintHeld=false;});
   window.addEventListener('blur',()=>{rootSprintHeld=false;});
   rootControls.querySelector('[data-root="use"]').onclick = () => { if(rootEncounter) rootEncounter.use = true; else if(depthsEncounter) depthsEncounter.use = true; };
+  rootControls.querySelector('[data-root="item"]').onclick = () => { if(rootEncounter) useSelectedAmbitionItem(); };
   const slowButton = rootControls.querySelector('[data-root="slow"]');
   slowButton.onclick = () => { if(bruinbleEvent&&bruinbleEvent.phase==='warning'){triggerBruinbleFailure();return;} rootSlow = !rootSlow; slowButton.textContent = rootSlow ? 'Devagar: ON' : 'Devagar'; };
   rootControls.querySelector('[data-root="pause"]').onclick = () => { if(rootEncounter) rootEncounter.paused = !rootEncounter.paused; else if(depthsEncounter) depthsEncounter.paused = !depthsEncounter.paused; };
@@ -7508,29 +7889,36 @@
     } catch(e) {}
   }
   const rootRoomSpecs = [
-    ['Entrada dos Mineiros',1100,'support_gallery','#d7a15f',263],
-    ['Câmara das Águas',900,'flooded_chamber','#91c6d1',245],
-    ['Veio de Cristais',1600,'crystal_vein','#b49ddd',220],
-    ['Túnel Soterrado',1200,'collapsed_tunnel','#b69064',290],
-    ['Oficina das Brocas',850,'drill_workshop','#d5a56b',250],
-    ['Poço das Correntes',1350,'vertical_shaft','#bdab80',210],
-    ['Depósito de Minério',1100,'ore_storage','#c3a16c',278],
-    ['Ponte sobre o Abismo',1450,'rail_bridge','#a9bbaf',232],
-    ['Bombas Abandonadas',950,'pump_station','#9bbfb7',270],
-    ['Gruta das Raízes',1250,'collapsed_tunnel','#a9b77b',250],
-    ['Galeria dos Trilhos',1150,'support_gallery','#cbb29b',222],
-    ['Salão do Desabamento',1100,'vertical_shaft','#d2b082',280]
+    // CAVERNA AFOGADA
+    ['Entrada Submersa',1100,'flooded_chamber','#78b7c6',263,'Caverna Afogada'],
+    ['Câmara das Águas',900,'pump_station','#91c6d1',245,'Caverna Afogada'],
+    ['Poço de Drenagem',1600,'vertical_shaft','#78aeb6',220,'Caverna Afogada'],
+    // JARDIM SUBTERRÂNEO
+    ['Jardim das Veias',1200,'crystal_vein','#94b77c',290,'Jardim Subterrâneo'],
+    ['Estufa Sepultada',850,'old_camp','#87aa72',250,'Jardim Subterrâneo'],
+    ['Galeria de Esporos',1350,'collapsed_tunnel','#719162',210,'Jardim Subterrâneo'],
+    // RUÍNAS ENTERRADAS
+    ['Arquivo de Pedra',1100,'ore_storage','#b69b79',278,'Ruínas Enterradas'],
+    ['Ponte dos Antigos',1450,'rail_bridge','#a99a80',232,'Ruínas Enterradas'],
+    ['Oficina Morta',950,'drill_workshop','#a88669',270,'Ruínas Enterradas'],
+    // CORAÇÃO DA AMBIÇÃO
+    ['Gruta das Raízes',1250,'collapsed_tunnel','#8fa45e',250,'Coração da Ambição'],
+    ['Artéria Principal',1150,'support_gallery','#a5b76a',222,'Coração da Ambição'],
+    ['Coração da Ambição',1100,'vertical_shaft','#c3cf7a',280,'Coração da Ambição']
   ];
   const rootRooms = []; let rootRoomOffset=0;
-  rootRoomSpecs.forEach((v,id)=>{rootRooms.push({id,name:v[0],x:rootRoomOffset,w:v[1],end:rootRoomOffset+v[1],kind:v[2],accent:v[3],deck:v[4]});rootRoomOffset+=v[1];});
+  rootRoomSpecs.forEach((v,id)=>{rootRooms.push({id,name:v[0],x:rootRoomOffset,w:v[1],end:rootRoomOffset+v[1],kind:v[2],accent:v[3],deck:v[4],region:v[5]});rootRoomOffset+=v[1];});
   const rootRoomAt = x => rootRooms.find(r=>x>=r.x&&x<r.end)||rootRooms[rootRooms.length-1];
   const rootFloor = (x,lane) => lane ? rootRoomAt(x).deck : 440;
   function buildRootDoors(){
     const doors=[];
     function link(from,to,x1,lane1,x2,lane2){
       const id=doors.length;
-      doors.push({id,room:from,to,x:x1,lane:lane1,arrival:x2,arrivalLane:lane2,pair:id+1});
-      doors.push({id:id+1,room:to,to:from,x:x2,lane:lane2,arrival:x1,arrivalLane:lane1,pair:id});
+      const optional = lane1===1 || Math.abs(to-from)>1;
+      const locked = optional && Math.random()<.62;
+      const keyId = locked ? `root-${Math.min(from,to)}-${Math.max(from,to)}-${id}` : null;
+      doors.push({id,room:from,to,x:x1,lane:lane1,arrival:x2,arrivalLane:lane2,pair:id+1,locked,keyId});
+      doors.push({id:id+1,room:to,to:from,x:x2,lane:lane2,arrival:x1,arrivalLane:lane1,pair:id,locked,keyId});
     }
     for(let i=0;i<rootRooms.length-1;i++)link(i,i+1,rootRooms[i].end-75,0,rootRooms[i+1].x+75,0);
     [[0,3],[2,7],[4,9],[6,10],[8,11]].forEach(([a,b])=>link(a,b,rootRooms[a].x+rootRooms[a].w*.62,1,rootRooms[b].x+rootRooms[b].w*.4,1));
@@ -7561,10 +7949,11 @@
     }
     if(b.install){
       b.install.t+=dt;
-      if(b.install.t>=1.25){
+      const installDuration=b.installBoost?0.46:1.25;
+      if(b.install.t>=installDuration){
         if(b.carry>0&&b.installed<10){b.carry--;b.installed++;rootSound(420,.25);rootSound(90,.45,true);b.panelPulse=1;
           rootSay(b.installed===10?'Elevador ligado! Use o guincho para distraí-lo.':`Fusível encaixado: ${b.installed}/10.`);}
-        b.install=null;
+        b.install=null;b.installBoost=0;
       }
     }
     b.panelPulse=Math.max(0,b.panelPulse-dt);
@@ -7578,9 +7967,9 @@
     const hiddenTypes=['drawer','crate','toolbox','shelf','machine'];
     const spots=[];
     for(const r of rootRooms){
-      for(let i=0;i<2;i++){
+      for(let i=0;i<3;i++){
         const lane=Math.random()<.48?1:0;
-        const base=i===0?.29:.70;
+        const base=i===0?.22:i===1?.52:.78;
         const jitter=(Math.random()-.5)*Math.min(120,r.w*.11);
         const x=clamp(r.x+r.w*base+jitter,r.x+135,r.end-135);
         spots.push({
@@ -7589,6 +7978,8 @@
           x,lane,
           type:hiddenTypes[Math.floor(Math.random()*hiddenTypes.length)],
           hasFuse:false,
+          keyId:null,
+          itemId:null,
           searched:false,
           taken:false
         });
@@ -7604,6 +7995,21 @@
       if(Math.random()<.18)spot.type='floor';
     });
     return spots;
+  }
+
+  function seedRootExplorationLoot(b){
+    // Put every locked-route key inside a drawer in one of the connected rooms.
+    const keyIds=[...new Set(b.doors.filter(d=>d.locked&&d.keyId).map(d=>d.keyId))];
+    for(const keyId of keyIds){
+      const door=b.doors.find(d=>d.keyId===keyId);
+      let choices=b.fuseSpots.filter(s=>s.room===door.room&&!s.hasFuse&&!s.keyId);
+      if(!choices.length)choices=b.fuseSpots.filter(s=>!s.hasFuse&&!s.keyId);
+      if(choices.length){const spot=choices[Math.floor(Math.random()*choices.length)];spot.type='drawer';spot.keyId=keyId;}
+    }
+    // Seed all new items across searchable props. The player can find most of them in one run.
+    const ids=[...AMBITION_ITEM_IDS];
+    const spots=b.fuseSpots.filter(s=>!s.hasFuse&&!s.keyId).sort(()=>Math.random()-.5);
+    ids.forEach((id,i)=>{if(spots[i])spots[i].itemId=id;});
   }
 
   function rootSpotLabel(type){
@@ -7644,10 +8050,17 @@
       bruinbleNext:32+Math.random()*18,bruinbleGrace:0,deathReason:null,
       doors:buildRootDoors(),doorTravel:null,monsterTravel:null,mClimb:null,install:null,panelPulse:0,
       stamina:100,staminaWait:0,exhausted:false,sprinting:false,
+      rootKeys:{},markedRooms:{},pressure:0,eyeReveal:0,eyeAftershock:0,sporeStun:0,flareT:0,flareX:0,flareLane:0,cutRoots:new Set(),
       cue:-1,hit:0,message:'',messageT:0};
     rootEncounter.ladders=rootRooms.flatMap(r=>[r.x+r.w*.24,r.x+r.w*.79]);
     rootEncounter.wardrobes=rootRooms.flatMap((r,i)=>[{x:r.x+190,lane:0},{x:r.end-220,lane:1},...(i%2?[{x:r.x+r.w*.5,lane:0}]:[])]);
     rootEncounter.covers=rootRooms.flatMap((r,i)=>[{x:r.x+r.w*.45,lane:0},{x:r.x+r.w*.52,lane:1}]);
+    rootEncounter.sprouts=rootRooms.flatMap((r,i)=>[
+      {x:r.x+r.w*(i%2?.34:.67),lane:i%3===0?1:0,triggered:false,pulse:Math.random()*TAU}
+    ]);
+    rootEncounter.hollows=[3,6,9].map((roomId,i)=>{const r=rootRooms[roomId];return {room:roomId,x:r.x+r.w*(.35+i*.12),lane:i%2,active:false,seen:false,cooldown:0,walk:Math.random()*TAU};});
+    rootEncounter.chaseTargetX=rootRooms[9].x+120;rootEncounter.chaseT=0;
+    seedRootExplorationLoot(rootEncounter);
     settleRootFuseSpots(rootEncounter);
     input.interactPressed = false; input.jumpPressed = false;
     rootControls.style.display = 'flex'; document.body.classList.add('root-room'); updateUiMode();
@@ -7762,6 +8175,49 @@
     }
   },{passive:false});
 
+  function selectedAmbitionItem(){
+    const owned=AMBITION_ITEM_IDS.filter(id=>hasAmbitionItem(id)&&(AMBITION_ITEM_DEFS[id].passive||ambitionItemUses(id)>0));
+    if(!owned.length)return null;
+    itemState.ambitionSelected=((itemState.ambitionSelected%owned.length)+owned.length)%owned.length;
+    return owned[itemState.ambitionSelected];
+  }
+  function cycleAmbitionItem(){
+    const owned=AMBITION_ITEM_IDS.filter(id=>hasAmbitionItem(id)&&(AMBITION_ITEM_DEFS[id].passive||ambitionItemUses(id)>0));
+    if(!owned.length){rootSay('Sua bolsa de exploração está vazia.');return;}
+    itemState.ambitionSelected=(itemState.ambitionSelected+1)%owned.length;
+    const id=owned[itemState.ambitionSelected],def=AMBITION_ITEM_DEFS[id];
+    rootSay(`${def.namePt}${def.uses?` · ${ambitionItemUses(id)} uso(s)`:' · passivo'}`);
+  }
+  function useSelectedAmbitionItem(){
+    const b=rootEncounter;if(!b||b.phase!=='play')return;
+    const id=selectedAmbitionItem();if(!id){rootSay('Nenhum item de Ambição equipado.');return;}
+    const def=AMBITION_ITEM_DEFS[id];
+    if(def.passive){cycleAmbitionItem();return;}
+    if(ambitionItemUses(id)<=0){cycleAmbitionItem();return;}
+    if(id==='luminescentSpray'){
+      b.markedRooms[rootRoomAt(b.x).id]=true;consumeAmbitionItem(id);rootSound(620,.1,true);rootSay('Você marcou esta região. A marca vai aparecer no mapa rasgado.');
+    }else if(id==='improvisedBattery'){
+      itemState.flashlightCharge=100;addSpareBattery(1);consumeAmbitionItem(id);rootSay('Bateria improvisada conectada. Lanterna recarregada.');
+    }else if(id==='rootCutter'){
+      const near=b.roots.find((r,i)=>!b.cutRoots.has(i)&&Math.abs((r.x+r.w*.5)-b.x)<150);
+      if(!near){rootSay('Nenhuma raiz grossa perto o bastante.');return;}
+      const idx=b.roots.indexOf(near);b.cutRoots.add(idx);consumeAmbitionItem(id);rootSound(180,.25,true);rootSay('Raiz cortada. Um trecho ficou mais limpo para atravessar.');
+    }else if(id==='rustyKey'){
+      const door=b.doors.find(d=>d.locked&&d.room===rootRoomAt(b.x).id&&d.lane===b.lane&&Math.abs(d.x-b.x)<80&&!b.rootKeys[d.keyId]);
+      if(!door){rootSay('Nenhuma fechadura compatível por perto.');return;}
+      b.rootKeys[door.keyId]=true;consumeAmbitionItem(id);rootSound(520,.12);rootSay('A chave enferrujada forçou a fechadura.');
+    }else if(id==='greenFlare'){
+      b.flareT=12;b.flareX=b.x;b.flareLane=b.lane;b.alert=12;b.heardX=b.x;b.heardLane=b.lane;consumeAmbitionItem(id);rootSound(820,.2,true);rootSay('Sinalizador lançado. O Enraizado foi atraído para a luz verde.');
+    }else if(id==='insulatingTape'){
+      if(b.carry<=0){rootSay('A fita é útil quando você estiver carregando um fusível.');return;}
+      b.installBoost=1;consumeAmbitionItem(id);rootSay('Fusível estabilizado com fita. A próxima instalação será muito mais rápida.');
+    }else if(id==='sporeCapsule'){
+      b.sporeStun=5;b.alert=0;b.pursuitMemory=0;b.knownWardrobe=null;consumeAmbitionItem(id);rootSound(95,.4,true);rootSay('Os esporos confundiram a criatura por alguns segundos.');
+    }else if(id==='ambitionEye'){
+      b.eyeReveal=8;b.eyeAftershock=0;consumeAmbitionItem(id);rootSound(960,.15);rootSay('O Olho da Ambição abriu. Fusíveis, armários e a criatura foram revelados.');
+    }
+  }
+
   function rootAction(){
     const b=rootEncounter;if(!b||b.phase!=='play'||b.climb||bruinbleEvent||b.doorTravel||b.install)return;
     if(b.hidden){
@@ -7777,7 +8233,11 @@
       rootSay(b.knownWardrobe?'Ele te seguiu até o armário... fique quieto.':'Escondido. Ele não consegue te ver aqui. E para sair.');return;
     }
     const door=b.doors.find(d=>d.room===rootRoomAt(b.x).id&&d.lane===b.lane&&Math.abs(d.x-b.x)<58);
-    if(door){b.doorTravel={door,t:0,moved:false,followed:b.seesPlayer||b.alert>0};rootSound(110,.25,true);return;}
+    if(door){
+      if(door.locked&&!b.rootKeys[door.keyId]&&!hasAmbitionItem('maintenanceCard')){rootSound(90,.08);rootSay('PORTA TRANCADA. Procure a chave nas gavetas próximas.');return;}
+      if(door.locked&&!b.rootKeys[door.keyId]&&hasAmbitionItem('maintenanceCard')){b.rootKeys[door.keyId]=true;rootSay('Cartão de Manutenção aceito. Atalho liberado.');}
+      b.doorTravel={door,t:0,moved:false,followed:b.seesPlayer||b.alert>0};rootSound(110,.25,true);return;
+    }
     const near=(x,lane)=>b.lane===lane&&Math.abs(b.x-x)<90;
     const spot=b.fuseSpots.find(s=>!s.searched&&near(s.x,s.lane));
     if(spot){
@@ -7785,6 +8245,11 @@
       if(spot.hasFuse){
         spot.taken=true;b.carry++;rootSound(470);rootSound(860,.08);
         rootSay(spot.type==='floor'?'Fusível recolhido. Leve ao painel do elevador.':'Fusível encontrado! Leve ao painel do elevador.');
+      }else if(spot.keyId){
+        b.rootKeys[spot.keyId]=true;rootSound(720,.12);rootSay('Você encontrou uma chave entre as gavetas. Uma rota próxima foi destrancada.');
+      }else if(spot.itemId){
+        const id=spot.itemId;spot.itemId=null;giveAmbitionItem(id,null,false);const def=AMBITION_ITEM_DEFS[id];
+        rootSound(560,.12);rootSay(`ITEM ENCONTRADO · ${def.namePt}${def.uses?` · ${ambitionItemUses(id)} uso(s)`:''}`);
       }else{
         rootSound(145,.12);rootSay(`Você procurou na ${rootSpotLabel(spot.type)}. Nada aqui.`);
       }
@@ -7799,8 +8264,10 @@
       rootSay('Máquina ligada por 24 segundos. Ele vai investigar o barulho.');return;
     }
     if(near(13890,0)){
-      if(b.installed===10&&b.lure>0&&Math.abs(b.mx-b.x)>210){b.phase='exit';b.t=0;rootSound(320,.8);}
-      else rootSay(b.installed<10?'O elevador precisa de dez fusíveis.':'Distraia a criatura e espere ela se afastar.');return;
+      if(b.installed===10&&b.lure>0&&Math.abs(b.mx-b.x)>210){
+        b.phase='chase';b.t=0;b.chaseT=0;b.hidden=null;b.lane=0;b.x=13845;b.mx=Math.min(13920,b.x+245);b.mlane=0;b.alert=99;b.pursuitMemory=99;
+        rootSound(48,1.1,true);rootSay('O ELEVADOR TRAVOU. CORRA PARA A SAÍDA DE EMERGÊNCIA!');
+      } else rootSay(b.installed<10?'O elevador precisa de dez fusíveis.':'Distraia a criatura e espere ela se afastar.');return;
     }
     const ladder=b.ladders.find(x=>Math.abs(b.x-x)<65);
     if(ladder!==undefined){b.climb={x:ladder,t:0,from:b.lane,to:1-b.lane};rootSound(120,.12);}
@@ -7845,6 +8312,13 @@
     const b=rootEncounter;if(!b)return;
     if(b.paused){input.interactPressed=false;return;}
     b.time+=dt;b.t+=dt;b.messageT=Math.max(0,b.messageT-dt);
+    b.pressure=clamp((b.installed/10)*.62+(b.x/rootRoomOffset)*.38,0,1);
+    b.eyeReveal=Math.max(0,(b.eyeReveal||0)-dt);
+    if(b.eyeReveal===0&&b.eyeAftershock<=0&&b._eyeWasActive){b.eyeAftershock=4;b._eyeWasActive=false;}
+    if(b.eyeReveal>0)b._eyeWasActive=true;
+    b.eyeAftershock=Math.max(0,(b.eyeAftershock||0)-dt);
+    b.sporeStun=Math.max(0,(b.sporeStun||0)-dt);
+    b.flareT=Math.max(0,(b.flareT||0)-dt);
     if(b.phase==='cinema'){
       const cue=b.t<2?0:b.t<4?1:b.t<5.2?2:b.t<6.1?3:b.t<9?4:5;
       if(cue!==b.cue){b.cue=cue;rootSound([55,100,170,80,38,180][cue],cue===4?1.4:.6,true);}
@@ -7852,6 +8326,23 @@
       b.cam=(b.mx-450)*easeInOut(travel)*(1-easeInOut(back));
       if(b.t>=14.5){b.phase='play';b.t=0;b.cam=0;b.dir=-1;input.interactPressed=false;b.use=false;rootSay('Explore a mina: 10 fusíveis. E: interagir / esconder.');}
       return;
+    }
+    if(b.phase==='chase'){
+      b.chaseT+=dt;b.pressure=1;cameraShake=Math.max(cameraShake,2.2);
+      const left=input.leftHeld||keys.get('KeyA')||keys.get('ArrowLeft');
+      const right=input.rightHeld||keys.get('KeyD')||keys.get('ArrowRight');
+      const wantsSprint=rootSprintHeld||keys.get('ShiftLeft')||keys.get('ShiftRight');
+      const move=(right?1:0)-(left?1:0);
+      const chaseSpeed=wantsSprint?455:355;
+      b.x=clamp(b.x+move*chaseSpeed*dt,b.chaseTargetX,13920);
+      if(move)b.facing=move;b.walk+=Math.abs(move)*dt*(wantsSprint?15:11);
+      if(wantsSprint&&move){b.stamina=Math.max(0,b.stamina-dt*20);}else b.stamina=Math.min(100,b.stamina+dt*14);
+      const monsterSpeed=330+Math.min(55,b.chaseT*3.2);
+      if(b.mx>b.x)b.mx=Math.max(b.x,b.mx-monsterSpeed*dt);else b.mx=Math.min(b.x,b.mx+monsterSpeed*dt);
+      b.dir=Math.sign(b.x-b.mx)||-1;b.mwalk+=dt*15;
+      if(Math.abs(b.mx-b.x)<42){b.deathReason='O Enraizado te alcançou durante a fuga.';b.phase='caught';b.t=0;rootSound(55,1,true);return;}
+      if(b.x<=b.chaseTargetX+3){b.phase='exit';b.t=0;rootSound(420,.5);return;}
+      rootCamera(b,dt);input.interactPressed=false;b.use=false;return;
     }
     if(b.phase==='exit'){if(b.t>2.5)finishRootEncounter();return;}
     if(b.phase==='caught'){
@@ -7876,7 +8367,9 @@
     const beforeX=b.x;
     if(b.climb){b.climb.t+=dt;b.x=b.climb.x;if(b.climb.t>=.85){b.lane=b.climb.to;b.climb=null;}}
     else {
-      const speed=slow?100:canSprint?400:245;
+      const wetRegion=rootRoomAt(b.x).region==='Caverna Afogada';
+      const waterSlow=(wetRegion&&!hasAmbitionItem('rubberBoots')) ? .82 : 1;
+      const speed=(slow?100:canSprint?400:245)*waterSlow;
       b.x=clamp(b.x+dir*speed*dt,rootRoomAt(b.x).x+45,rootRoomAt(b.x).end-45);
       if(dir)b.facing=dir;b.walk+=Math.abs(dir)*dt*(slow?4:canSprint?14:9);
     }
@@ -7902,16 +8395,40 @@
     }
     if(updateRootWardrobeGame(dt)){rootCamera(b,dt);return;}
     if(b.phase!=='play')return;
+    // BROTO — reacts to loud sprinting and exposes the player's position.
+    for(const sprout of (b.sprouts||[])){
+      sprout.pulse+=dt*3.4;
+      if(!sprout.triggered&&b.sprinting&&sprout.lane===b.lane&&Math.abs(sprout.x-b.x)<105){
+        sprout.triggered=true;b.alert=Math.max(b.alert,6+b.pressure*4);b.heardX=b.x;b.heardLane=b.lane;b.pursuitMemory=Math.max(b.pursuitMemory,5);
+        rootSound(740,.16,true);rootSay('BROTO ouviu você correr. O Enraizado sabe onde você está.');
+      }
+    }
+    // OCO — a human-shaped silhouette that silently follows inside its room.
+    for(const h of (b.hollows||[])){
+      h.cooldown=Math.max(0,h.cooldown-dt);
+      const sameRoom=rootRoomAt(b.x).id===h.room;
+      if(!h.active&&sameRoom&&Math.abs(h.x-b.x)<180){h.active=true;h.seen=true;rootSay('Tem alguém parado aqui... mas não é um jogador.');}
+      if(h.active&&sameRoom){
+        const delta=b.x-h.x;const desired=Math.max(72,115-b.pressure*25);
+        if(Math.abs(delta)>desired)h.x+=Math.sign(delta)*Math.min(Math.abs(delta)-desired,(46+b.pressure*22)*dt);
+        h.lane=b.lane;h.walk+=dt*5;
+        if(Math.abs(delta)<82&&h.cooldown<=0){
+          h.cooldown=10;b.alert=Math.max(b.alert,3.5);b.heardX=b.x;b.heardLane=b.lane;rootSound(125,.12,true);rootSay('O Oco chegou perto demais. Alguma coisa ouviu.');
+        }
+      }
+    }
     // Sight-based pursuit. Solid mining debris blocks sight on each walkway.
     const dx=b.x-b.mx;
     const blocked=b.covers.some(o=>o.lane===b.lane&&o.x>Math.min(b.x,b.mx)+20&&o.x<Math.max(b.x,b.mx)-20);
-    b.seesPlayer=!b.hidden&&!b.climb&&!b.doorTravel&&!b.monsterTravel&&!b.mClimb&&rootRoomAt(b.x).id===rootRoomAt(b.mx).id&&b.lane===b.mlane&&!blocked&&
-      (Math.abs(dx)<85||(Math.abs(dx)<470&&Math.sign(dx)===b.dir));
+    b.seesPlayer=b.sporeStun<=0&&!b.hidden&&!b.climb&&!b.doorTravel&&!b.monsterTravel&&!b.mClimb&&rootRoomAt(b.x).id===rootRoomAt(b.mx).id&&b.lane===b.mlane&&!blocked&&
+      (Math.abs(dx)<85||(Math.abs(dx)<(470+b.pressure*110)&&Math.sign(dx)===b.dir));
     b.noise=lerp(b.noise,b.seesPlayer?1:0,dt*7);
     if(b.seesPlayer){b.alert=4;b.heardX=b.x;b.heardLane=b.lane;b.knownWardrobe=null;b.pursuitMemory=4.5;}
     let target,targetLane;
     if(b.knownWardrobe){target=b.knownWardrobe.x;targetLane=b.knownWardrobe.lane;}
     else if(b.seesPlayer||b.alert>0){target=b.heardX;targetLane=b.heardLane;}
+    else if(b.sporeStun>0){target=b.mx;targetLane=b.mlane;}
+    else if(b.flareT>0){target=b.flareX;targetLane=b.flareLane;}
     else if(b.lure>0){target=13050;targetLane=0;}
     else {
       b.patrolWait=Math.max(0,b.patrolWait-dt);
@@ -7945,7 +8462,7 @@
     }else if(routeDoor&&Math.abs(b.mx-routeDoor.x)<20){
       b.monsterTravel={door:routeDoor,t:0};rootCamera(b,dt);return;
     }
-    const speed=pursuing?285:b.lure>0?210:b.patrolWait>0?0:108;
+    const pressureSpeed=1+b.pressure*.18;const speed=(pursuing?285:b.flareT>0?225:b.lure>0?210:b.patrolWait>0?0:108)*pressureSpeed;
     const delta=target-b.mx;
     if(Math.abs(delta)>2)b.dir=Math.sign(delta);
     b.mx=clamp(b.mx+Math.sign(delta)*Math.min(Math.abs(delta),speed*dt),currentRoom.x+45,currentRoom.end-45);
@@ -8051,6 +8568,7 @@
       rootLine([[65,r.deck-41],[r.w-65,r.deck-41]],'#806348',3);
       for(let x=75;x<r.w-65;x+=120)rootLine([[x,r.deck-41],[x,r.deck+14]],'#4c3521',6);
       if(r.id===9){for(let j=0;j<12;j++)rootLine([[j*110,15],[j*110+25,135],[j*110-18,235]],'#52613a',8);}
+      if(b.markedRooms[r.id]){ctx.save();ctx.strokeStyle='#a8ff77';ctx.lineWidth=5;ctx.globalAlpha=.78;ctx.beginPath();ctx.moveTo(42,180);ctx.lineTo(68,155);ctx.lineTo(88,184);ctx.lineTo(58,205);ctx.closePath();ctx.stroke();ctx.restore();}
       ctx.restore();
     }
     b.ladders.forEach(x=>{const top=rootFloor(x,1);for(let dx of [-20,20])rootLine([[x+dx,top],[x+dx,440]],'#8b8f70',5);for(let yy=top+12;yy<440;yy+=20)rootLine([[x-20,yy],[x+20,yy]],'#8b8f70',3);});
@@ -8062,9 +8580,10 @@
       ctx.fillStyle=d.lane?'#4a3b2a':'#39281d';ctx.fillRect(0,0,62,131);
       rootLine([[5,8],[56,122]],'#987044',4);ctx.fillStyle='#cda96e';ctx.fillRect(47,67,5,11);ctx.restore();
       ctx.strokeStyle=rootRooms[d.to].accent;ctx.lineWidth=3;ctx.strokeRect(d.x-34,y-135,68,135);
+      if(d.locked&&!b.rootKeys[d.keyId]&&!hasAmbitionItem('maintenanceCard')){ctx.fillStyle='#d2a760';ctx.fillRect(d.x-8,y-76,16,19);ctx.strokeStyle='#3a2817';ctx.strokeRect(d.x-8,y-76,16,19);}
       ctx.fillStyle='#ecd1a2';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillText(`${d.to+1} · ${rootRooms[d.to].name}`,d.x,y-145);ctx.textAlign='left';
     });
-    b.roots.forEach(r=>{for(let i=0;i<4;i++)rootLine([[r.x,440-i],[r.x+40,430-i*3],[r.x+100,444-i*2],[r.x+r.w,435]],b.installed?'#749158':'#3b5434',4);});
+    b.roots.forEach((r,ri)=>{if(b.cutRoots.has(ri))return;for(let i=0;i<4;i++)rootLine([[r.x,440-i],[r.x+40,430-i*3],[r.x+100,444-i*2],[r.x+r.w,435]],b.installed?'#749158':'#3b5434',4);});
     b.covers.forEach(o=>{
       const y=rootFloor(o.x,o.lane);
       ctx.fillStyle='#3b2b1e';ctx.strokeStyle='#725137';ctx.lineWidth=4;
@@ -8108,6 +8627,7 @@
         ctx.fillStyle='#303a34';ctx.fillRect(-28,-54,56,54);ctx.strokeStyle='#7c927f';ctx.lineWidth=3;ctx.strokeRect(-28,-54,56,54);
         ctx.fillStyle=open?'#243129':'#93aa91';ctx.fillRect(-17,-42,34,14);ctx.fillStyle='#b98c59';ctx.fillRect(-4,-18,8,8);
       }
+      if(b.eyeReveal>0&&!open&&(s.hasFuse||s.keyId||s.itemId)){ctx.save();ctx.globalAlpha=.82;ctx.strokeStyle=s.hasFuse?'#ffe792':s.keyId?'#8de8ff':'#b5ff9e';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,-62,18+Math.sin(b.time*6)*3,0,TAU);ctx.stroke();ctx.restore();}
       if(open&&s.type!=='floor'){
         ctx.fillStyle='rgba(214,195,155,.55)';ctx.font='10px system-ui';ctx.textAlign='center';ctx.fillText('REVIRADO',0,-82);ctx.textAlign='left';
       }
@@ -8169,8 +8689,26 @@
       ctx.save();
       if(b.monsterTravel)ctx.globalAlpha=Math.abs(1-b.monsterTravel.t/.48);
       const monsterY=b.mClimb?lerp(rootFloor(b.mx,b.mClimb.from),rootFloor(b.mx,b.mClimb.to),easeInOut(clamp(b.mClimb.t/.7,0,1))):rootFloor(b.mx,b.mlane);
+      if(b.eyeReveal>0){ctx.save();ctx.strokeStyle='#e5ff91';ctx.lineWidth=5;ctx.shadowColor='#dfff73';ctx.shadowBlur=18;ctx.beginPath();ctx.arc(b.mx,monsterY-95,82,0,TAU);ctx.stroke();ctx.restore();}
       drawRootMonster(b.mx,monsterY,b.mwalk,1,b.alert>0);
       ctx.restore();
+    }
+    if(b.flareT>0){const fy=rootFloor(b.flareX,b.flareLane);ctx.save();ctx.fillStyle='#9dff86';ctx.shadowColor='#62ff68';ctx.shadowBlur=28;ctx.beginPath();ctx.arc(b.flareX,fy-20,9,0,TAU);ctx.fill();ctx.restore();}
+    // Brotos embedded in walls/floors.
+    for(const sprout of (b.sprouts||[])){
+      if(sprout.x<b.cam-100||sprout.x>b.cam+1000)continue;const sy=rootFloor(sprout.x,sprout.lane);
+      ctx.save();ctx.translate(sprout.x,sy-18);ctx.strokeStyle=sprout.triggered?'#b6d775':'#5f814d';ctx.lineWidth=4;
+      ctx.beginPath();ctx.moveTo(0,18);ctx.quadraticCurveTo(-13,-10,-4,-34);ctx.quadraticCurveTo(8,-10,0,18);ctx.stroke();
+      ctx.fillStyle=sprout.triggered?'#e7ff9d':'#aecf83';ctx.beginPath();ctx.ellipse(-6,-32,8,5,-.4,0,TAU);ctx.fill();ctx.beginPath();ctx.ellipse(7,-23,8,5,.5,0,TAU);ctx.fill();
+      if(sprout.triggered){ctx.fillStyle='#f1db80';ctx.shadowColor='#dfff75';ctx.shadowBlur=10;ctx.beginPath();ctx.arc(0,-18,3+Math.sin(sprout.pulse)*1.2,0,TAU);ctx.fill();}
+      ctx.restore();
+    }
+    // Oco silhouettes.
+    for(const h of (b.hollows||[])){
+      if(h.x<b.cam-100||h.x>b.cam+1000)continue;const hy=rootFloor(h.x,h.lane);
+      ctx.save();ctx.translate(h.x,hy);ctx.globalAlpha=h.active?.82:.56;ctx.fillStyle='#161b18';ctx.strokeStyle='#839083';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(0,-115,15,0,TAU);ctx.fill();ctx.stroke();rootLine([[0,-100],[-2,-55]],'#667064',7);rootLine([[-2,-82],[-20,-55]],'#667064',5);rootLine([[-2,-82],[18,-57]],'#667064',5);rootLine([[-2,-55],[-15,-4]],'#667064',6);rootLine([[-2,-55],[15,-4]],'#667064',6);
+      ctx.fillStyle=h.active?'#d9e7d4':'#7f8b7c';ctx.beginPath();ctx.arc(-5,-117,2,0,TAU);ctx.arc(5,-117,2,0,TAU);ctx.fill();ctx.restore();
     }
     if(bruinbleEvent)drawBruinbleEvent();
     const py=b.climb?lerp(rootFloor(b.x,b.climb.from),rootFloor(b.x,b.climb.to),easeInOut(Math.min(1,b.climb.t/.85))):rootFloor(b.x,b.lane);
@@ -8186,24 +8724,30 @@
       const near=b.fuseSpots.find(s=>!s.searched&&s.lane===b.lane&&Math.abs(s.x-b.x)<90);
       let hint=near?(near.type==='floor'?'E · Pegar fusível':`E · Procurar ${rootSpotLabel(near.type)}`):Math.abs(b.x-13740)<90&&b.lane===0?'E · Instalar fusível':Math.abs(b.x-13890)<90&&b.lane===0?'E · Entrar no elevador':Math.abs(b.x-13050)<90&&b.lane===0?'E · Ligar máquina':b.ladders.some(x=>Math.abs(x-b.x)<65)?'E · Subir / descer':'';
       const nearDoor=b.doors.find(d=>d.room===rootRoomAt(b.x).id&&d.lane===b.lane&&Math.abs(d.x-b.x)<58);
-      if(nearDoor)hint='E · '+rootRooms[nearDoor.to].name;
+      if(nearDoor)hint=nearDoor.locked&&!b.rootKeys[nearDoor.keyId]&&!hasAmbitionItem('maintenanceCard')?'E · TRANCADA · procure a chave':'E · '+rootRooms[nearDoor.to].name;
       if(b.install)hint='Encaixando fusível...';
       if(b.hidden)hint=b.wardrobeGame?'NÃO SAIA · siga o coração':'E · Sair do armário';
       else if(b.wardrobes.some(w=>w.lane===b.lane&&Math.abs(w.x-b.x)<48))hint='E · Esconder no armário';
       if(hint){ctx.font='bold 15px system-ui';ctx.fillStyle='#fff0bc';ctx.fillText(hint,b.x-65,py-95);}
     }
     ctx.restore();
+    if(hasAmbitionItem('mineralLantern')){const rr=rootRoomAt(b.x);ctx.save();ctx.globalAlpha=.12+.05*Math.sin(b.time*4);ctx.fillStyle=rr.region==='Coração da Ambição'?'#d8ff8f':'#9fe6ca';ctx.beginPath();ctx.arc(450,260,170,0,TAU);ctx.fill();ctx.restore();}
+    if(hasAmbitionItem('rootFragment')&&rootRoomAt(b.x).region==='Coração da Ambição'){ctx.save();ctx.globalAlpha=.28+.12*Math.sin(b.time*7);ctx.strokeStyle='#d9ec8c';ctx.lineWidth=2;ctx.beginPath();ctx.arc(450,260,205,0,TAU);ctx.stroke();ctx.restore();}
     const shade=ctx.createRadialGradient(450,260,130,450,260,530);shade.addColorStop(0,'transparent');shade.addColorStop(1,'#000b');ctx.fillStyle=shade;ctx.fillRect(0,0,900,500);
     ctx.textAlign='center';
     if(b.phase==='cinema'){
       ctx.fillStyle='#000';ctx.fillRect(0,0,900,55);ctx.fillRect(0,445,900,55);
       ctx.fillStyle='#d6e5d4';ctx.font='14px system-ui';ctx.fillText(b.t<2?'250 / GALERIA ENRAIZADA':b.t<3.4?'Um estrondo no fundo da mina.':b.t<5.2?'Há algo acima das vigas.':b.t<9?'ENRAIZADO':'A mina inteira ouviu.',450,477);
     }else{
-      ctx.fillStyle='#120c08eb';ctx.fillRect(0,0,900,69);ctx.fillStyle='#d4e7d5';ctx.font='bold 19px system-ui';ctx.fillText(`250 · ENRAIZADO  /  FUSÍVEIS ${b.installed}/10`,450,27);
-      ctx.font='13px system-ui';ctx.fillStyle=b.noise>.4?'#f7ad7d':'#a7c6b1';ctx.fillText(`Carregando: ${b.carry}   ·   ${bruinbleEvent?'BRUINBLE · Não aperte nada quando o aviso começar':b.bruinbleGrace>0?'Enraizado ainda sem visão: mova-se!':b.wardrobeGame?'ARMÁRIO · mantenha o ritmo':b.hidden?'Escondido · E: sair':b.seesPlayer?'ELE TE VIU! Quebre a linha de visão.':b.alert>0?'Ele procura você...':'Use armários e a cobertura das caixas · E: interagir'}`,450,51);
+      ctx.fillStyle='#120c08eb';ctx.fillRect(0,0,900,88);ctx.fillStyle='#d4e7d5';ctx.font='bold 18px system-ui';ctx.fillText(`250 · ${rootRoomAt(b.x).region.toUpperCase()}  /  FUSÍVEIS ${b.installed}/10`,450,23);
+      ctx.font='12px system-ui';ctx.fillStyle=b.noise>.4?'#f7ad7d':'#a7c6b1';ctx.fillText(`Carregando: ${b.carry}   ·   PRESSÃO ${Math.round(b.pressure*100)}%   ·   ${bruinbleEvent?'BRUINBLE':b.seesPlayer?'ELE TE VIU!':b.alert>0?'Ele procura você...':'Explore, procure gavetas e abra novas rotas.'}`,450,44);
+      const sel=selectedAmbitionItem(),def=sel?AMBITION_ITEM_DEFS[sel]:null;ctx.fillStyle='#d9c78c';ctx.fillText(def?`Q · ${def.namePt}${def.uses?` (${ambitionItemUses(sel)})`:' · PASSIVO'}`:'Q · Bolsa vazia',450,65);
+      if(hasAmbitionItem('vibrationSensor')){const dd=Math.abs(b.mx-b.x);ctx.textAlign='left';ctx.fillStyle=dd<260?'#ff9e7a':dd<600?'#ffd477':'#91c8a4';ctx.fillText(`⌁ VIBRAÇÃO ${dd<260?'FORTE':dd<600?'MÉDIA':'BAIXA'}`,22,82);ctx.textAlign='center';}
+      if(hasAmbitionItem('fuseDetector')){const f=b.fuseSpots.filter(s=>s.hasFuse&&!s.searched).sort((a,c)=>Math.abs(a.x-b.x)-Math.abs(c.x-b.x))[0];if(f){ctx.textAlign='right';ctx.fillStyle='#ffe79c';ctx.fillText(`⌖ FUSÍVEL ${f.x>b.x?'→':'←'} ${Math.round(Math.abs(f.x-b.x)/10)}m`,878,82);ctx.textAlign='center';}}
       if(b.messageT>0){ctx.fillStyle='#07120eed';ctx.fillRect(35,394,830,37);ctx.fillStyle='#e2e7c9';ctx.font='14px system-ui';ctx.fillText(b.message,450,417);}
       if(b.lure>0){ctx.fillStyle='#e8dca1';ctx.fillText(`Máquina: ${Math.ceil(b.lure)}s`,450,90);}
     }
+    if(b.eyeAftershock>0){ctx.save();ctx.globalAlpha=.08+.08*Math.sin(b.time*30);for(let i=0;i<8;i++){ctx.fillStyle=i%2?'#b9ff93':'#6ea9aa';ctx.fillRect(Math.sin(b.time*8+i)*18,i*62,900,2);}ctx.restore();}
     if(b.wardrobeGame&&b.phase==='play')drawRootWardrobeMinigame(b.wardrobeGame);
     if(b.phase==='caught'){
       ctx.fillStyle='#080b09cc';ctx.fillRect(0,0,900,500);
@@ -8212,8 +8756,12 @@
         ctx.fillStyle='#ffe5b1';ctx.font='bold 26px system-ui';ctx.fillText('BRUINBLE',450,470);
       }else{ctx.save();ctx.translate(450,500);ctx.scale(2.3,2.3);drawRootMonster(0,0,b.time*9,1,true);ctx.restore();}
     }
-    if(b.phase==='exit'){ctx.fillStyle=`rgba(0,0,0,${Math.min(1,b.t/2)})`;ctx.fillRect(0,0,900,500);ctx.fillStyle='#d4e7d5';ctx.font='22px system-ui';ctx.fillText('O sinal ficou para trás.',450,250);}
+    if(b.phase==='exit'){ctx.fillStyle=`rgba(0,0,0,${Math.min(1,b.t/2)})`;ctx.fillRect(0,0,900,500);ctx.fillStyle='#d4e7d5';ctx.font='22px system-ui';ctx.fillText(b.t<1.4?'Você chegou ao Coração.':'Isto não é o organismo inteiro.',450,238);ctx.font='13px system-ui';ctx.fillStyle='#92aa83';ctx.fillText('É apenas uma raiz de algo muito maior.',450,272);}
     if(b.doorTravel){ctx.fillStyle=`rgba(0,0,0,${Math.sin(Math.min(1,b.doorTravel.t/.6)*Math.PI)*.92})`;ctx.fillRect(0,0,900,500);}
+    if(b.phase==='chase'){
+      ctx.fillStyle='#170c09e8';ctx.fillRect(0,0,900,72);ctx.fillStyle='#ffd0a2';ctx.font='bold 22px system-ui';ctx.textAlign='center';ctx.fillText('FUGA · O CORAÇÃO ESTÁ DESABANDO',450,29);
+      ctx.font='13px system-ui';ctx.fillStyle='#f1d8b4';ctx.fillText('CORRA PARA A ESQUERDA · SHIFT aumenta a velocidade',450,52);
+    }
     if(b.phase==='play'){
       ctx.save();ctx.textAlign='left';
       ctx.fillStyle='#130f0ddb';ctx.fillRect(16,78,194,47);
@@ -8223,7 +8771,11 @@
       ctx.fillStyle=b.exhausted?'#b46c48':b.sprinting?'#f1c572':'#a6b88b';ctx.fillRect(25,104,175*b.stamina/100,8);
       ctx.restore();
     }
-    if(b.phase==='play'){ctx.fillStyle='#d5bd92';ctx.font='12px system-ui';ctx.textAlign='right';ctx.fillText(`${rootRoomAt(b.x).id+1}/12 · ${rootRoomAt(b.x).name}`,885,488);}
+    if(b.phase==='play'){
+      ctx.fillStyle='#d5bd92';ctx.font='12px system-ui';ctx.textAlign='right';ctx.fillText(`${rootRoomAt(b.x).id+1}/12 · ${rootRoomAt(b.x).name}`,885,488);
+      if(hasAmbitionItem('tornMap')){ctx.textAlign='left';ctx.fillStyle='rgba(9,14,10,.82)';ctx.fillRect(16,438,290,46);ctx.fillStyle='#cdd9b1';ctx.fillText(`MAPA · ${rootRoomAt(b.x).region}`,24,454);ctx.fillStyle='#91ad82';ctx.fillText(`Marcadas: ${Object.keys(b.markedRooms).length} · Rotas: ${b.doors.filter(d=>d.room===rootRoomAt(b.x).id).length}`,24,472);}
+      if(hasAmbitionItem('brokenWatch')){const danger=clamp(1-Math.abs(b.mx-b.x)/900,0,1);ctx.textAlign='center';ctx.fillStyle=danger>.7?'#ff9a7d':danger>.35?'#e8cf86':'#91bda0';ctx.fillText(`◷ ${danger>.7?'RÁPIDO':danger>.35?'IRREGULAR':'LENTO'}`,450,486);}
+    }
     if(b.paused){ctx.textAlign='center';ctx.fillStyle='#000b';ctx.fillRect(0,0,900,500);ctx.fillStyle='#e0efda';ctx.font='bold 26px system-ui';ctx.fillText('PAUSADO',450,250);}
     ctx.restore();
   }
@@ -8843,6 +9395,7 @@
         updateWorld(dt);
         updateDoors(dt);
         if (state === 'root') return;
+        mpProcessPendingEntityEvents();
         enforceEntityTransitionSafety();
         updateRoomInteractives(dt);
         updateBlackout(dt);
@@ -10421,7 +10974,7 @@
     ctx.fillText(String(d.number), d.w / 2, 69);
     ctx.restore();
 
-    if (d.number === 1 && !startRoomKeyFound && !d.opened) {
+    if (d.keyLocked && !hasDoorKey(d.number) && !d.opened && !d.sharedOpen) {
       ctx.save();
       ctx.globalAlpha = 1 - open * .45;
       ctx.strokeStyle = '#c5a36a';
@@ -11822,6 +12375,7 @@
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText(`¢ ${itemState.coins}`, infoX + 12, H - 160);
     ctx.fillText(`🔋 ${itemState.batteries}`, infoX + 12, H - 142);
+    const keyCount=Object.keys(itemState.doorKeys||{}).length;if(keyCount){ctx.fillStyle='#ffe0a2';ctx.fillText(`⚿ ${keyCount}`,infoX+108,H-160);}
     if (itemState.flashlight) {
       ctx.fillStyle = 'rgba(0,0,0,.42)'; roundRect(infoX + 78, H - 150, 56, 12, 6); ctx.fill();
       const bw = 56 * (itemState.flashlightCharge / 100);
